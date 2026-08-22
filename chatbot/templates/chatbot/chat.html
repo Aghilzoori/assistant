@@ -1,0 +1,92 @@
+{% extends 'index.html' %}
+
+
+{% block blockname %}
+<section class="messages" id="messages">
+
+    <div class="message bot-message">
+        سلام! 👋
+        <br />
+        من دستیار هوشمند شما هستم. چطور می‌توانم کمکتان کنم؟
+        <span class="message-time">۱۰:۳۰</span>
+    </div>
+
+    <div class="message user-message">
+        سلام، حالت چطوره؟
+        <span class="message-time">۱۰:۳۱</span>
+    </div>
+
+    <div class="message bot-message">
+        ممنونم، عالی هستم! 😊
+        <br />
+        آماده‌ام تا به سؤالات شما پاسخ بدهم.
+        <span class="message-time">۱۰:۳۱</span>
+    </div>
+
+    <div class="message user-message">
+        می‌تونی درباره طراحی سایت راهنمایی‌ام کنی؟
+        <span class="message-time">۱۰:۳۲</span>
+    </div>
+
+    <div class="message bot-message">
+        بله، حتماً! می‌توانم در زمینه HTML، CSS و طراحی رابط کاربری به شما کمک کنم.
+        <span class="message-time">۱۰:۳۲</span>
+    </div>
+
+</section>
+
+<form class="chat-form" id="chatForm" method="get" action="{% url 'read-opinion' %}">
+    {% csrf_token %}
+    <input type="text" name="text" id="chatInput" class="chat-input" placeholder="پیام خود را بنویسید..." autocomplete="off"
+        required />
+
+    <button type="submit" class="send-button">
+        ➤
+    </button>
+</form>
+
+<script>
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const messages = document.getElementById("messages");
+
+    function getCurrentTime() {
+        return new Date().toLocaleTimeString("fa-IR", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    }
+
+    function addMessage(text, type) {
+        const message = document.createElement("div");
+
+        message.className = `message ${type}-message`;
+
+        message.innerHTML = `
+        ${text}
+        <span class="message-time">${getCurrentTime()}</span>
+      `;
+
+        messages.appendChild(message);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    chatForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const text = chatInput.value.trim();
+
+        if (!text) return;
+
+        addMessage(text, "user");
+        chatInput.value = "";
+
+        setTimeout(() => {
+            addMessage(
+                "پیام شما دریافت شد! 🤖<br>این یک پاسخ نمونه برای ربات است.",
+                "bot"
+            );
+        }, 700);
+    });
+</script>
+{% endblock blockname %}
