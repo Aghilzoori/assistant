@@ -2,5 +2,6 @@
 __pycache__/
 env/
 *.py[cod]
-data-assistant/
 .python-version
+db.sqlite3
+staticfile
