@@ -191,7 +191,8 @@ body::after {
 
 .message {
     position: relative;
-    max-width: 68%;
+    max-width: 78%;
+    min-width: 0;
     padding: 15px 19px;
     border: 1px solid var(--border);
     border-radius: 18px;
@@ -201,6 +202,7 @@ body::after {
     animation: messageAppear 0.35s ease both;
     backdrop-filter: blur(12px);
 }
+
 
 .you-message {
     align-self: flex-start;
@@ -390,9 +392,9 @@ body::after {
     }
 
     .message {
-        max-width: 88%;
+        max-width: 92%;
         padding: 13px 15px;
-        font-size: 13px;
+        font-size: 14px;
     }
 
     .chat-form {
@@ -411,4 +413,111 @@ body::after {
         height: 48px;
         min-width: 50px;
     }
+}
+
+.message-content {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: plaintext;
+
+    width: 100%;
+    font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 2;
+    overflow-wrap: anywhere;
+}
+
+.message-content p {
+    margin: 0 0 12px;
+}
+
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+    margin: 18px 0 8px;
+    line-height: 1.6;
+}
+
+.message-content ul,
+.message-content ol {
+    margin: 10px 0;
+    padding-right: 28px;
+    padding-left: 0;
+}
+
+.message-content li {
+    margin-bottom: 5px;
+}
+
+.message-content blockquote {
+    margin: 14px 0;
+    padding: 8px 14px;
+    border-right: 4px solid var(--purple);
+    border-left: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.message-content a {
+    color: #7dd3fc;
+    text-decoration: underline;
+}
+
+/* کدهای کوتاه داخل متن */
+.message-content code {
+    direction: ltr;
+    unicode-bidi: embed;
+    display: inline-block;
+
+    padding: 2px 6px;
+    border-radius: 5px;
+    color: #f8fafc;
+    background: rgba(0, 0, 0, 0.35);
+    font-family: Consolas, monospace;
+    font-size: 0.9em;
+}
+
+/* بلوک‌های کد */
+.message-content pre {
+    direction: ltr;
+    text-align: left;
+    max-width: 100%;
+    overflow-x: auto;
+
+    margin: 14px 0;
+    padding: 14px;
+    border-radius: 8px;
+    background: #111827;
+    white-space: pre;
+}
+
+.message-content pre code {
+    display: block;
+    padding: 0;
+    background: transparent;
+}
+
+/* جدول‌های Markdown */
+.message-content table {
+    width: 100%;
+    margin: 14px 0;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.message-content th,
+.message-content td {
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.message-content th {
+    background: rgba(255, 255, 255, 0.1);
 }
