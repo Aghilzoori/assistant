@@ -135,3 +135,22 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+#MarkDown 
+
+MARKDOWNIFY = {
+    "default": {
+        "WHITELIST_TAGS": [
+            "a", "br", "code", "pre",
+            "p", "strong", "em",
+            "ul", "ol", "li",
+            "blockquote",
+            "table", "thead", "tbody", "tr", "th", "td",
+        ],
+        "MARKDOWN_EXTENSIONS": [
+            "fenced_code",
+            "tables",
+        ],
+    }
+}
+
