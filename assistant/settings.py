@@ -154,3 +154,21 @@ MARKDOWNIFY = {
     }
 }
 
+# logging
+
+import logging
+
+
+LOG_FILE = BASE_DIR / "django.log"
+
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    encoding="utf-8",
+)
+
+#models
+
+OLLAMA_MODEL = "qwen3:8b"
