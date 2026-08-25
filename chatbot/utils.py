@@ -27,16 +27,12 @@ def get_model_options():
 
 
 def ai(model, message, tools=None, options=None):
-    try:
-        response = ollama.chat(
-            model=model,
-            messages=[message],
-            tools=tools or [],
-            options=options or {}
-        )
+    
+    response = ollama.chat(
+        model=model,
+        messages=[message],
+        tools=tools or [],
+        options=options or {}
+    )
 
-        return response.get("message", {}).get("content", "")
-
-    except ollama.ResponseError as e:
-        logger.error(f"Ollama error: {e}")
-        raise
+    return response.get("message", {}).get("content", "")
