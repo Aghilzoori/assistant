@@ -1,43 +1,48 @@
 from django.shortcuts import render, redirect
 from .models import Messages
 from .forms import MessagesForms
-from .utils import ai, is_battery_on_charge
+from .utils import ai, get_model_options
+from django.conf import settings
+from django.http import HttpResponseServerError
 
 def chat(request):
-    if request.method == "POST":
-        form = MessagesForms(request.POST)
+    form = MessagesForms(request.POST)
+    
+    if request.method == "POST" and form.is_valid():
 
-        if form.is_valid():
-            text = form.cleaned_data["text"].strip()
+        text = form.cleaned_data["text"].strip()
 
-            Messages.objects.create(
-                role="user",
-                text=text
-            )
+        Messages.objects.create(
+            role="user",
+            text=text
+        )
 
+        
+        try:
             result = ai(
-                "qwen3:8b",
-                {
+                model=settings.OLLAMA_MODEL,
+                message={
                     "role": "user",
                     "content": text
                 },
-                [],
-                is_battery_on_charge(),
+                options=get_model_options(),
             )
+        except Exception:
+            return HttpResponseServerError("""
+The server encountered an error.
+Please try again.
+If the error persists, contact support.
+                                        """)
 
-            Messages.objects.create(
-                role="you",
-                text=result
-            )
+        Messages.objects.create(
+            role="you",
+            text=result
+        )
 
-            return redirect("chat")
-
-    else:
-        form = MessagesForms()
+        return redirect("chat")
 
     context = {
         "messages": Messages.objects.all(),
-        "form": form,
     }
 
     return render(request, "chatbot/chat.html", context)

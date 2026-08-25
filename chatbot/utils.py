@@ -1,34 +1,42 @@
 import ollama
 import psutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def is_battery_on_charge():
-    battery = psutil.sensors_battery()
-
+# Experimental - for system power management
+def get_model_options():
+    try:
+        battery = psutil.sensors_battery()
+    except Exception:
+        return {
+            "num_thread": 7,
+            "num_gpu": 0,
+        }
     if battery is None:
         return {
             "num_thread": 5,
             "num_gpu": 0,
         }
-
-    if battery.power_plugged:
+    else:
         return {
             "num_thread": 5,
             "num_gpu": 3,
         }
 
-    return {
-        "num_thread": 7,
-        "num_gpu": 0,
-    }
-
 
 def ai(model, message, tools=None, options=None):
-    response = ollama.chat(
-        model=model,
-        messages=[message],
-        tools=tools or [],
-        options=options or {}
-    )
+    try:
+        response = ollama.chat(
+            model=model,
+            messages=[message],
+            tools=tools or [],
+            options=options or {}
+        )
 
-    return response["message"]["content"]
+        return response.get("message", {}).get("content", "")
+
+    except ollama.ResponseError as e:
+        logger.error(f"Ollama error: {e}")
+        raise

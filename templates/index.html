@@ -3,29 +3,41 @@
 {% load static %}
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="{% static 'styles/main.css' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-  <title>چت‌بات هوشمند</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>چت‌بات هوشمند</title>
+
+    <link rel="stylesheet" href="{% static 'styles/main.css' %}">
+    <link rel="stylesheet" href="{% static 'styles/chat.css' %}">
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet"
+    >
 </head>
 
 <body>
+    <main class="chat-container">
+        <header class="chat-header">
+            <div class="bot-avatar" aria-label="ربات گفتگو" role="img">🤖</div>
+        </header>
 
-  <main class="chat-container">
-
-    <header class="chat-header">
-      <div class="bot-avatar">🤖</div>
-    </header>
-
-    {% block blockname %}
-
-    {% endblock blockname %}
+        {% block blockname %}
+        {% endblock blockname %}
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-
+    <script src="{% static 'js/chat.js' %}"></script>
 </body>
 
 </html>
