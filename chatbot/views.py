@@ -4,6 +4,10 @@ from .forms import MessagesForms
 from .utils import ai, get_model_options
 from django.conf import settings
 from django.http import HttpResponseServerError
+import ollama
+import logging
+
+logger = logging.getLogger(__name__)
 
 def chat(request):
     form = MessagesForms(request.POST)
@@ -27,12 +31,24 @@ def chat(request):
                 },
                 options=get_model_options(),
             )
-        except Exception:
+        except ollama.ResponseError as e:
+            logger.error(f"Ollama error: {e}")
+
             return HttpResponseServerError("""
-The server encountered an error.
-Please try again.
-If the error persists, contact support.
-                                        """)
+        The AI service is currently unavailable or returned an invalid response.
+        Please try again later.
+        If the problem persists, contact support.
+            """)
+
+        except Exception as e:
+            logger.error(f"Unexpected server error: {e}")
+
+            return HttpResponseServerError("""
+        The server encountered an unexpected error.
+        Please try again later.
+        If the error persists, contact support.
+            """)
+
 
         Messages.objects.create(
             role="you",
