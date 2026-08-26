@@ -99,3 +99,4 @@ Traceback (most recent call last):
 django.db.utils.OperationalError: no such table: chatbot_messages
 2026-08-25 15:55:43 | INFO: Watching for file changes with StatReloader
 2026-08-25 15:56:59 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-26 18:35:41 | INFO: Watching for file changes with StatReloader
