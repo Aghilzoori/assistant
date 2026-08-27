@@ -100,3 +100,19 @@ django.db.utils.OperationalError: no such table: chatbot_messages
 2026-08-25 15:55:43 | INFO: Watching for file changes with StatReloader
 2026-08-25 15:56:59 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
 2026-08-26 18:35:41 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:27:56 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:28:14 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-27 16:28:15 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:28:21 | WARNING: Method Not Allowed: /
+2026-08-27 16:28:21 | WARNING: Not Found: /favicon.ico
+2026-08-27 16:30:04 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-27 16:30:05 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:30:14 | INFO: /home/antonio/Desktop/assistant/chatbot/utils.py changed, reloading.
+2026-08-27 16:30:15 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:30:33 | INFO: /home/antonio/Desktop/assistant/chatbot/urls.py changed, reloading.
+2026-08-27 16:30:34 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:30:49 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-27 16:30:50 | INFO: Watching for file changes with StatReloader
+2026-08-27 16:31:20 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-27 16:33:44 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-27 16:39:25 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"

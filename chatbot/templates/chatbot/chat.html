@@ -15,7 +15,6 @@
     {% for message in messages %}
     <div class="message {{ message.role }}-message">
         {{ message.text|markdownify }}
-
         <span class="message-time">
             {{ message.created|date:"Y/m/d H:i" }}
         </span>
@@ -23,9 +22,8 @@
     {% endfor %}
 </section>
 
-<form class="chat-form" id="chatForm" method="post" action="{% url 'chat' %}">
+<form class="chat-form" id="chatForm">
     {% csrf_token %}
-
     <textarea
         name="text"
         id="chatInput"
@@ -38,5 +36,52 @@
 
     <button type="submit" id="sendButton" class="send-button">➤</button>
 </form>
+
+<script>
+const form = document.getElementById("chatForm");
+const input = document.getElementById("chatInput");
+const messages = document.getElementById("messages");
+const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    const userBox = document.createElement("div");
+    userBox.className = "message user-message";
+    userBox.textContent = text;
+    messages.appendChild(userBox);
+
+    const aiBox = document.createElement("div");
+    aiBox.className = "message assistant-message";
+    aiBox.textContent = "";
+    messages.appendChild(aiBox);
+
+    input.value = "";
+
+    const response = await fetch("{% url 'chat_stream' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify({ text })
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let result = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        result += decoder.decode(value, { stream: true });
+        aiBox.textContent = result;
+    }
+});
+</script>
 
 {% endblock blockname %}
