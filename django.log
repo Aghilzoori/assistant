@@ -116,3 +116,22 @@ django.db.utils.OperationalError: no such table: chatbot_messages
 2026-08-27 16:31:20 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
 2026-08-27 16:33:44 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
 2026-08-27 16:39:25 | INFO: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-28 19:18:57 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:23:01 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:23:02 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:23:04 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:23:05 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:23:12 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:23:13 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:23:17 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:23:18 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:23:21 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:23:22 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:23:50 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:23:51 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:24:21 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:24:22 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:25:26 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:25:26 | INFO: Watching for file changes with StatReloader
+2026-08-28 19:26:43 | INFO: /home/antonio/Desktop/assistant/chatbot/views.py changed, reloading.
+2026-08-28 19:26:44 | INFO: Watching for file changes with StatReloader
