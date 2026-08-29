@@ -1,7 +1,4 @@
-from django.forms import ModelForm
-from .models import Messages
+from django import forms
 
-class MessagesForms(ModelForm):
-    class Meta:
-        model = Messages
-        fields = ["text"]
+class MessagesForms(forms.Form):
+    text = forms.CharField(widget=forms.Textarea)

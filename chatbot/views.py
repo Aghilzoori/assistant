@@ -2,47 +2,37 @@ from django.shortcuts import render, redirect
 from .models import Messages
 from .forms import MessagesForms
 from .utils import ai, is_battery_on_charge
+from django.http import StreamingHttpResponse, JsonResponse
+
+def chat_page(request):
+    messages = Messages.objects.all()
+    return render(request, "chatbot/chat.html", {"messages": messages})
 
 def chat(request):
-    if request.method == "POST":
-        form = MessagesForms(request.POST)
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-        if form.is_valid():
-            text = form.cleaned_data["text"].strip()
+    form = MessagesForms(request.POST)
+    if not form.is_valid():
+        return JsonResponse({"error": "Invalid form"}, status=400)
 
-            Messages.objects.create(
-                role="user",
-                text=text
-            )
+    text = form.cleaned_data["text"].strip()
 
-            result = ai(
-                "qwen3:8b",
-                {
-                    "role": "user",
-                    "content": text
-                },
-                [],
-                is_battery_on_charge(),
-            )
+    Messages.objects.create(role="user", text=text)
 
-            Messages.objects.create(
-                role="you",
-                text=result
-            )
+    def generate():
+        full_text = ""
+        for chunk in ai(
+            "qwen3:8b",
+            {"role": "user", "content": text},
+            [],
+            is_battery_on_charge(),
+        ):
+            full_text += chunk
+            yield chunk
 
-            return redirect("chat")
-
-    else:
-        form = MessagesForms()
-
-    context = {
-        "messages": Messages.objects.all(),
-        "form": form,
-    }
-
-    return render(request, "chatbot/chat.html", context)
+        Messages.objects.create(role="ai", text=full_text)
 
 
-
-
+    return StreamingHttpResponse(generate(), content_type="text/plain; charset=utf-8")
 # Create your views here.

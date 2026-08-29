@@ -25,10 +25,12 @@ def is_battery_on_charge():
 
 def ai(model, message, tools=None, options=None):
     response = ollama.chat(
-        model=model,
-        messages=[message],
-        tools=tools or [],
-        options=options or {}
+        model = model,
+        messages = [message],
+        tools = tools or [],
+        options = options or {},
+        stream = True,
     )
 
-    return response["message"]["content"]
+    for Character in response:
+        yield Character["message"]["content"]

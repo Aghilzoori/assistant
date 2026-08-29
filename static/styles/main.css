@@ -193,15 +193,16 @@ body::after {
     position: relative;
     max-width: 78%;
     min-width: 0;
-    padding: 15px 19px;
+    padding: 10px 14px; /* کاهش padding از 15px 19px به 10px 14px */
     border: 1px solid var(--border);
     border-radius: 18px;
     color: var(--text);
     font-size: 14px;
-    line-height: 2;
+    line-height: 1.5; /* کاهش line-height از 2 به 1.5 */
     animation: messageAppear 0.35s ease both;
     backdrop-filter: blur(12px);
 }
+
 
 
 .you-message {
@@ -228,26 +229,32 @@ body::after {
 
 .user-message {
     align-self: flex-end;
+    /* تغییرات اصلی: پدینگ کمتر و محدودیت عرض */
+    padding: 8px 14px; 
+    max-width: 80%; 
+    line-height: 1.4;
+    
     border-bottom-left-radius: 5px;
     border-color: rgba(34, 211, 238, 0.24);
-    background:
-        linear-gradient(135deg,
-            rgba(8, 145, 178, 0.58),
-            rgba(37, 99, 235, 0.6));
-    box-shadow: 0 8px 25px rgba(8, 145, 178, 0.12);
+    background: linear-gradient(135deg, rgba(8, 145, 178, 0.58), rgba(37, 99, 235, 0.6));
+    /* سایه را کمی ملایم‌تر کردم تا باکس ظریف‌تر به نظر برسد */
+    box-shadow: 0 4px 12px rgba(8, 145, 178, 0.12);
 }
 
 .user-message::before {
     content: "YOU";
     position: absolute;
-    top: -18px;
+    /* کمی نزدیک‌تر به باکس */
+    top: -16px; 
     right: 10px;
     color: #a5f3fc;
     font-family: monospace;
-    font-size: 9px;
+    font-size: 8px; /* کمی کوچکتر برای ظرافت بیشتر */
     direction: ltr;
     letter-spacing: 1px;
+    opacity: 0.8;
 }
+
 
 .message-time {
     display: block;
