@@ -1,27 +1,60 @@
-from django.shortcuts import render, redirect
-from .models import Messages
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Messages, Chat
 from .forms import MessagesForms
 from .utils import ai, is_battery_on_charge
 from django.http import StreamingHttpResponse, JsonResponse
 
-def chat_page(request):
-    messages = Messages.objects.all()
-    return render(request, "chatbot/chat.html", {"messages": messages})
+def now_chat(request):
+    return render(request, "chatbot/chat.html", {
+        "messages": [],
+        "chat": None,
+        "chats": Chat.objects.all(),
+        "first_message": None,
+    })
 
-def chat(request):
+def chat_page(request, pk=None):
+    chats = Chat.objects.all()
+    chat = get_object_or_404(Chat, id=pk)
+    messages = Messages.objects.filter(chat=chat)
+    first_message = messages.first()
+    return render(request, "chatbot/chat.html", {"messages": messages, "chat": chat, "chats": chats, "first_message": first_message,})
+
+def chat(request, pk=None):
     if request.method != "POST":
-        return JsonResponse({"error": "Only POST allowed"}, status=405)
+        return JsonResponse(
+            {"error": "Only POST allowed"},
+            status=405
+        )
 
     form = MessagesForms(request.POST)
+
     if not form.is_valid():
-        return JsonResponse({"error": "Invalid form"}, status=400)
+        return JsonResponse(
+            {"error": "Invalid form"},
+            status=400
+        )
 
     text = form.cleaned_data["text"].strip()
 
-    Messages.objects.create(role="user", text=text)
+    if pk is None:
+        chat = Chat.objects.create(
+            name=text[:20]
+        )
+    else:
+        chat = get_object_or_404(
+            Chat,
+            id=pk
+        )
+
+    Messages.objects.create(
+        chat=chat,
+        role="user",
+        text=text
+    )
 
     def generate():
         full_text = ""
+
         for chunk in ai(
             "qwen3:8b",
             {"role": "user", "content": text},
@@ -31,8 +64,14 @@ def chat(request):
             full_text += chunk
             yield chunk
 
-        Messages.objects.create(role="ai", text=full_text)
+        Messages.objects.create(
+            chat=chat,
+            role="ai",
+            text=full_text
+        )
 
-
-    return StreamingHttpResponse(generate(), content_type="text/plain; charset=utf-8")
+    return StreamingHttpResponse(
+        generate(),
+        content_type="text/plain; charset=utf-8"
+    )
 # Create your views here.

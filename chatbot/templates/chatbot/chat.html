@@ -1,605 +1,189 @@
 {% extends 'index.html' %}
+{% load static %}
 {% load markdownify %}
 
 {% block blockname %}
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
 <style>
-    .chat-app {
-        /* --- Monochrome token system --- */
-        --ink: #111112;
-        --ink-soft: #38383a;
-        --paper: #ffffff;
-        --paper-sunk: #f4f4f5;
-        --line: #e2e2e4;
-        --line-strong: #c9c9cc;
-        --muted: #8b8b8f;
-
-        --radius-lg: 18px;
-        --radius-sm: 10px;
-
-        font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
-        color: var(--ink);
-        display: flex;
-        flex-direction: column;
-        height: 100dvh;
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        background: var(--paper);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .chat-app * {
-            animation-duration: 0.001ms !important;
-            transition-duration: 0.001ms !important;
-        }
-    }
-
-    /* نشانگر «در حال پاسخ‌گویی» بالای کادر ورودی */
     .ai-loading {
-        display: none;
-        position: absolute;
-        top: -24px;
-        right: 4px;
-        align-items: center;
-        gap: 4px;
-        direction: ltr;
-    }
-
-    .ai-loading.active {
-        display: flex;
-    }
-
-    .ai-loading span {
-        width: 5px;
-        height: 5px;
-        background-color: var(--ink-soft);
-        border-radius: 50%;
-        animation: ai-dot 1.2s infinite ease-in-out;
-    }
-
-    .ai-loading span:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-
-    .ai-loading span:nth-child(3) {
-        animation-delay: 0.4s;
-    }
-
-    @keyframes ai-dot {
-
-        0%,
-        80%,
-        100% {
-            transform: scale(0.6);
-            opacity: 0.35;
-        }
-
-        40% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    /* ---------- حالت خالی (پیش از اولین پیام) ---------- */
-    .empty-hero {
-        display: none;
-        flex: 1;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 34px;
-        padding: 24px clamp(16px, 8vw, 12%);
-        background: var(--paper-sunk);
-    }
-
-    .chat-app.is-empty .empty-hero {
-        display: flex;
-    }
-
-    .chat-app.is-empty .messages {
-        display: none;
-    }
-
-    .chat-app.is-empty .chat-form {
-        border-top: none;
-        background: transparent;
-        box-shadow: none;
-        padding: 0;
-    }
-
-    .empty-hero .chat-form {
-        width: 100%;
-        max-width: 620px;
-    }
-
-    .empty-greeting {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 14px;
-        text-align: center;
-    }
-
-    .empty-icon {
-        color: var(--ink);
-        opacity: 0.9;
-    }
-
-    .empty-greeting h1 {
-        margin: 0;
-        font-size: 25px;
-        font-weight: 700;
-        letter-spacing: -0.3px;
-        color: var(--ink);
-    }
-
-    /* ---------- پیام‌ها ---------- */
-    .messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 22px clamp(16px, 4vw, 44px);
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        background: var(--paper-sunk);
-        scrollbar-width: thin;
-        scrollbar-color: var(--line-strong) transparent;
-    }
-
-    .messages::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .messages::-webkit-scrollbar-thumb {
-        background: var(--line-strong);
-        border-radius: 10px;
-    }
-
-    .message {
-        direction: rtl;
-        text-align: right;
-        line-height: 1.85;
-        max-width: min(78%, 640px);
-        padding: 12px 16px;
-        border-radius: var(--radius-lg);
-        white-space: pre-wrap;
-        word-break: break-word;
-        font-size: 15px;
-        box-shadow: 0 1px 2px rgba(17, 17, 18, 0.04);
-    }
-
-    .user-message {
-        align-self: flex-end;
-        background: var(--ink);
-        color: var(--paper);
-        border-bottom-left-radius: var(--radius-sm);
-    }
-
-    .ai-message {
-        align-self: flex-start;
-        background: var(--paper);
-        color: var(--ink);
-        border: 1px solid var(--line);
-        border-bottom-right-radius: var(--radius-sm);
-    }
-
-    .message-time {
-        display: block;
-        margin-top: 6px;
-        font-size: 11px;
-        font-weight: 500;
-        opacity: 0.6;
-    }
-
-    .user-message .message-time {
-        color: var(--paper);
-    }
-
-    .ai-message .message-time {
-        color: var(--muted);
-    }
-
-    /* کدهای چندخطی */
-    .message pre {
-        direction: ltr !important;
-        text-align: left !important;
-
-        display: block;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-
-        margin: 10px 0 0;
-        padding: 44px 16px 16px;
-
-        overflow-x: auto;
-        overflow-y: auto;
-
-        background: #19191b !important;
-        color: #f2f2f3 !important;
-
-        border: 1px solid #2c2c2e;
-        border-radius: var(--radius-sm);
-
-        font-family: Consolas, Monaco, "Courier New", monospace !important;
-        font-size: 13.5px;
-        line-height: 1.7;
-
-        white-space: pre !important;
-        word-break: normal !important;
-        overflow-wrap: normal !important;
-
-        unicode-bidi: isolate;
-    }
-
-    .message pre code {
-        display: block;
-
-        direction: ltr !important;
-        text-align: left !important;
-
-        margin: 0;
-        padding: 0;
-
-        background: transparent !important;
-        color: inherit !important;
-
-        font-family: Consolas, Monaco, "Courier New", monospace !important;
-        font-size: inherit;
-        line-height: inherit;
-
-        white-space: pre !important;
-        word-break: normal !important;
-        overflow-wrap: normal !important;
-    }
-
-    /* کدهای کوتاه داخل متن */
-    .message code:not(pre code) {
-        direction: ltr !important;
-        unicode-bidi: isolate;
-
-        display: inline-block;
-        padding: 2px 6px;
-
-        background: rgba(0, 0, 0, 0.08);
-        color: inherit;
-        border-radius: 5px;
-
-        font-family: Consolas, Monaco, "Courier New", monospace !important;
-        font-size: 0.88em;
-    }
-
-    .user-message code:not(pre code) {
-        background: rgba(255, 255, 255, 0.16);
-    }
-
-    /* ظرف کد و دکمه کپی */
-    .code-wrapper {
-        position: relative;
-        width: 100%;
-        margin: 16px 0;
-        direction: ltr;
-    }
-
-    .copy-code-button {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-
-        direction: rtl;
-        text-align: center;
-
-        padding: 5px 10px;
-        border: 1px solid #3a3a3c;
-        border-radius: 6px;
-
-        background: #232325;
-        color: #e6e6e7;
-
-        font-family: 'Vazirmatn', inherit;
-        font-size: 11.5px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: 0.2s;
-
-        z-index: 2;
-    }
-
-    .copy-code-button:hover {
-        background: #2f2f31;
-    }
-
-    .copy-code-button.copied {
-        background: var(--ink);
-        color: #fff;
-        border-color: var(--ink);
-    }
-
-    /* ---------- فرم چت ---------- */
-    .chat-form {
-        display: flex;
-        align-items: flex-end;
-        gap: 10px;
-        /* پدینگ بالا ۱۰ و پایین ۸ پیکسل تنظیم شده تا کادر بالاتر بیاید */
-        padding: 10px clamp(16px, 4vw, 44px) 8px; 
-        background: var(--paper);
-        border-top: 1px solid var(--line);
-        /* اگر می‌خواهید کلا کمی از لبه فاصله داشته باشد */
-        margin-bottom: 2px; 
-    }
-
-
-    @property --glow-angle {
-        syntax: '<angle>';
-        inherits: false;
-        initial-value: 0deg;
-    }
-
-    /* حلقهٔ نور چرخان دور کادر متن */
-    .input-glow {
-        position: relative;
-        flex: 1;
-        border-radius: 20px;
-    }
-
-    .input-glow::before {
-        content: "";
-        position: absolute;
-        inset: -2px;
-        border-radius: inherit;
-        background: conic-gradient(from var(--glow-angle),
-                transparent 0deg,
-                transparent 205deg,
-                var(--line-strong) 255deg,
-                #ffffff 285deg,
-                var(--line-strong) 315deg,
-                transparent 360deg);
-        opacity: 0;
-        transition: opacity 0.25s ease;
-        animation: spin-glow 2.6s linear infinite;
-        animation-play-state: paused;
-        z-index: 0;
-        pointer-events: none;
-    }
-
-    .input-glow:hover::before,
-    .input-glow:focus-within::before {
-        opacity: 1;
-        animation-play-state: running;
-    }
-
-    @keyframes spin-glow {
-        to {
-            --glow-angle: 360deg;
-        }
-    }
-
-    .chat-input {
-        position: relative;
-        z-index: 1;
-        width: 100%;
-
-        min-height: 10px;
-        max-height: 10vh;
-
-        padding: 8px 16px;
-
-        resize: none;
-        overflow-y: hidden;
-
-        line-height: 1.6;
-        font-family: 'Vazirmatn', inherit;
-        font-size: 15px;
-
-        color: var(--ink);
-        background: var(--paper-sunk);
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        outline: none;
-        box-sizing: border-box;
-        transition: border-color 0.15s, background 0.15s;
-    }
-
-    .chat-input::placeholder {
-        color: var(--muted);
-    }
-
-    .chat-input:focus {
-        border-color: var(--ink-soft);
-        background: var(--paper);
-    }
-
-    .chat-input:focus-visible {
-        outline: none;
-    }
-
-    .chat-input:read-only {
-        opacity: 0.7;
-    }
-
-    .send-button {
-        width: 46px;
-        height: 46px;
-        flex-shrink: 0;
-
         display: flex;
         align-items: center;
         justify-content: center;
-
-        border: none;
-        border-radius: 50%;
-
-        background: var(--ink);
-        color: var(--paper);
-
-        cursor: pointer;
-        transition: background 0.15s, transform 0.1s;
+        color: var(--ink);
+        /* رنگ فعلی برند خودت */
     }
 
-    .send-button svg {
-        width: 19px;
-        height: 19px;
-    }
-
-    .send-button:hover:not(:disabled) {
-        background: var(--ink-soft);
-    }
-
-    .send-button:active:not(:disabled) {
-        transform: scale(0.94);
-    }
-
-    .send-button:focus-visible {
-        outline: 2px solid var(--ink);
-        outline-offset: 2px;
-    }
-
-    .send-button:disabled {
-        background: var(--line-strong);
-        color: var(--paper);
-        cursor: not-allowed;
-    }
-
-    @media (max-width: 640px) {
-        .message {
-            max-width: 88%;
-        }
-
-        .empty-greeting h1 {
-            font-size: 21px;
-        }
+    .ai-loading-frame {
+        width: 22px;
+        height: 22px;
+        display: block;
     }
 </style>
 
-<div class="chat-app {% if not messages %}is-empty{% endif %}" id="chatApp">
-    <div class="empty-hero" id="emptyHero">
-        <div class="empty-greeting">
-            <span class="empty-icon">
-                <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
-                    <path
-                        d="M12 2.5c.6 2.9 1.3 4.9 2.3 5.9 1 1 3 1.7 5.9 2.3-2.9.6-4.9 1.3-5.9 2.3-1 1-1.7 3-2.3 5.9-.6-2.9-1.3-4.9-2.3-5.9-1-1-3-1.7-5.9-2.3 2.9-.6 4.9-1.3 5.9-2.3 1-1 1.7-3 2.3-5.9z" />
-                </svg>
-            </span>
-            <h1>سلام! چه کمکی از دستم برمی‌آد؟</h1>
+<div class="app-layout" id="appLayout">
+    <div class="chat-app {% if not messages %}is-empty{% endif %}" id="chatApp">
+        <div class="empty-hero" id="emptyHero">
+            <div class="empty-greeting">
+                <span class="empty-icon">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+                        <path
+                            d="M12 2.5c.6 2.9 1.3 4.9 2.3 5.9 1 1 3 1.7 5.9 2.3-2.9.6-4.9 1.3-5.9 2.3-1 1-1.7 3-2.3 5.9-.6-2.9-1.3-4.9-2.3-5.9-1-1-3-1.7-5.9-2.3 2.9-.6 4.9-1.3 5.9-2.3 1-1 1.7-3 2.3-5.9z" />
+                    </svg>
+                </span>
+                <h1>How can I help you today</h1>
+            </div>
         </div>
+
+        <section class="messages" id="messages" aria-live="polite" aria-label="Chat messages">
+            {% for message in messages %}
+            <div class="message {{ message.role }}-message">
+                <div class="message-text">{{ message.text|markdownify }}</div>
+                <span class="message-time">{{ message.created|date:"Y/m/d H:i" }}</span>
+            </div>
+            {% endfor %}
+        </section>
+
+        {% if chat %}
+        <form class="chat-form" id="chatForm" method="post" action="{% url 'chat' chat.id %}">
+            {% else %}
+            <form class="chat-form" id="chatForm" method="post" action="{% url 'send_message' %}">
+                {% endif %}
+                {% csrf_token %}
+                <div class="input-glow">
+                    <div id="aiLoading" class="ai-loading" aria-label="Responding">
+                        <img id="aiLoadingFrame" class="ai-loading-frame"
+                            src="{% static 'images/loading/loading1.svg' %}" alt="">
+                    </div>
+                    <textarea name="text" id="chatInput" class="chat-input" placeholder="Ask anything you want"
+                        aria-label="Message" autocomplete="off" required rows="1"></textarea>
+                </div>
+                <div class="input-actions" aria-label="Chat tools">
+                    <div class="attach-menu-wrap">
+                        <button type="button" class="attach-button" id="attachButton" aria-label="More options"
+                            aria-expanded="false" aria-controls="attachDropdown">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                        <div class="attach-dropdown" id="attachDropdown" role="menu" aria-label="Chat tools">
+                            <div class="attach-dropdown-title">Tools</div>
+                            <button type="button" class="attach-dropdown-item" id="webImageSearch" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7"></circle>
+                                    <path d="m20 20-4-4"></path>
+                                    <circle cx="11" cy="11" r="3"></circle>
+                                </svg>
+                                <span>Search for files/images on the web<small>To connect to real web
+                                        search</small></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" id="sendButton" class="send-button" aria-label="Send">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="6 11 12 5 18 11"></polyline>
+                    </svg>
+                </button>
+            </form>
     </div>
 
-    <section class="messages" id="messages">
-        {% for message in messages %}
-        <div class="message {{ message.role }}-message">
-            <div class="message-text">{{ message.text|linebreaksbr }}</div>
-            <span class="message-time">{{ message.created|date:"Y/m/d H:i" }}</span>
-        </div>
-        {% endfor %}
-    </section>
+    <aside class="sidebar" id="sidebar" aria-label="Chat history">
 
-    <form class="chat-form" id="chatForm" method="post" action="{% url 'chat' %}">
-        {% csrf_token %}
-        <div class="input-glow">
-            <div id="aiLoading" class="ai-loading" aria-label="در حال پاسخ‌گویی">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            <textarea name="text" id="chatInput" class="chat-input" placeholder="پیام خود را بنویسید..."
-                autocomplete="off" required rows="1"></textarea>
+        <div class="new-chat-row">
+            <a href="{% url 'now_chat' %}" class="new-chat-button" id="newChatButton" aria-label="Start a new chat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>New chat</span>
+            </a>
+            <span class="new-chat-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                    <path
+                        d="M12 2.5c.6 2.9 1.3 4.9 2.3 5.9 1 1 3 1.7 5.9 2.3-2.9.6-4.9 1.3-5.9 2.3-1 1-1.7 3-2.3 5.9-.6-2.9-1.3-4.9-2.3-5.9-1-1-3-1.7-5.9-2.3 2.9-.6-4.9-1.3-5.9-2.3-1-1.7-1.3-3-2.3-5.9z" />
+                </svg>
+            </span>
         </div>
-        <button type="submit" id="sendButton" class="send-button" aria-label="ارسال">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-                stroke-linejoin="round">
-                <line x1="12" y1="19" x2="12" y2="5"></line>
-                <polyline points="6 11 12 5 18 11"></polyline>
-            </svg>
-        </button>
-    </form>
+
+        <div class="chat-history" id="chatHistory">
+            <span class="chat-history-label">Recent chats</span>
+            {% for item in chats %}
+            <div class="chat-history-row">
+                <button type="button" class="chat-history-item active"><a href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
+                <div class="chat-history-actions" aria-label="Chat operations">
+                    <button type="button" class="chat-action pin-action" title="پین کردن" aria-label="پین کردن">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m12 17 5-5-4-4-5 5"></path>
+                            <path d="M8 21l4-4"></path>
+                            <path d="M15 3l6 6"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="chat-action delete-action" title="حذف" aria-label="حذف">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 7h16"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                            <path d="M6 7l1 13h10l1-13"></path>
+                            <path d="M9 7V4h6v3"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="نمایش چت‌ها">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 </div>
 
 <script>
-    const chatApp = document.getElementById('chatApp');
-    const emptyHero = document.getElementById('emptyHero');
-    const form = document.getElementById('chatForm');
-    const input = document.getElementById('chatInput');
-    const messages = document.getElementById('messages');
-    const loading = document.getElementById('aiLoading');
-    const sendButton = document.getElementById('sendButton');
+    (function () {
+        const TOTAL_FRAMES = 6;
+        const FRAME_INTERVAL_MS = 50;
+        const framePaths = Array.from({ length: TOTAL_FRAMES }, (_, i) =>
+            "{% static 'images/loading/' %}" + "loading" + (i + 1) + ".svg"
+        );
 
-    // اگر صفحه با حالت خالی بارگذاری شده، فرم رو داخل کادر خوش‌آمدگویی جابه‌جا کن
-    if (chatApp.classList.contains('is-empty')) {
-        emptyHero.appendChild(form);
-    }
+        const frameImg = document.getElementById("aiLoadingFrame");
+        let timerId = null;
+        let currentIndex = 0;
 
-    function exitEmptyState() {
-        if (!chatApp.classList.contains('is-empty')) return;
-        chatApp.classList.remove('is-empty');
-        chatApp.appendChild(form);
-    }
-
-    function addMessage(text, role) {
-        const div = document.createElement('div');
-        div.className = `message ${role}-message`;
-        div.innerHTML = `
-            <div class="message-text"></div>
-            <span class="message-time">${new Date().toLocaleString('fa-IR')}</span>
-        `;
-        div.querySelector('.message-text').textContent = text;
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
-        return div;
-    }
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const text = input.value.trim();
-        if (!text) return;
-
-        const formData = new FormData(form);
-
-        exitEmptyState();
-        addMessage(text, 'user');
-        input.value = '';
-        loading.style.display = 'flex';
-        sendButton.disabled = true;
-
-        const aiMessageEl = addMessage('', 'ai');
-        const aiTextEl = aiMessageEl.querySelector('.message-text');
-
-        try {
-            const res = await fetch(form.action, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!res.ok || !res.body) {
-                throw new Error('Stream error');
-            }
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let fullText = '';
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                fullText += chunk;
-                aiTextEl.textContent = fullText;
-                messages.scrollTop = messages.scrollHeight;
-            }
-        } catch (err) {
-            aiTextEl.textContent = 'خطا در دریافت پاسخ';
-        } finally {
-            loading.style.display = 'none';
-            sendButton.disabled = false;
-            input.focus();
+        function startLoadingAnimation() {
+            if (timerId || !frameImg) return;
+            timerId = setInterval(() => {
+                currentIndex = (currentIndex + 1) % TOTAL_FRAMES;
+                frameImg.src = framePaths[currentIndex];
+            }, FRAME_INTERVAL_MS);
         }
-    });
+
+        function stopLoadingAnimation() {
+            if (timerId) {
+                clearInterval(timerId);
+                timerId = null;
+            }
+            currentIndex = 0;
+            if (frameImg) frameImg.src = framePaths[0];
+        }
+
+        window.startAiLoadingAnimation = startLoadingAnimation;
+        window.stopAiLoadingAnimation = stopLoadingAnimation;
+    })();
 </script>
 
 {% endblock blockname %}

@@ -1,0 +1,154 @@
+<svg
+  id="ai-assistant"
+  width="240"
+  height="240"
+  viewBox="0 0 240 240"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <!-- پس‌زمینه گرادیانی -->
+    <linearGradient id="ai-gradient" x1="40" y1="30" x2="205" y2="215">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <!-- درخشش اطراف آیکون -->
+    <filter id="ai-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- سایه -->
+    <filter id="ai-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow
+        dx="0"
+        dy="8"
+        stdDeviation="8"
+        flood-color="#0F172A"
+        flood-opacity="0.22"
+      />
+    </filter>
+  </defs>
+
+  <!-- هاله بیرونی؛ برای انیمیشن pulse مناسب است -->
+  <circle
+    id="ai-glow-ring"
+    cx="120"
+    cy="120"
+    r="91"
+    fill="#8B5CF6"
+    opacity="0.12"
+  />
+
+  <!-- حلقه اصلی -->
+  <circle
+    id="ai-ring"
+    cx="120"
+    cy="120"
+    r="78"
+    stroke="url(#ai-gradient)"
+    stroke-width="5"
+    opacity="0.9"
+  />
+
+  <!-- بدنه اصلی ربات -->
+  <g id="ai-body" filter="url(#ai-shadow)">
+    <rect
+      x="59"
+      y="70"
+      width="122"
+      height="105"
+      rx="34"
+      fill="url(#ai-gradient)"
+    />
+
+    <!-- گوش چپ -->
+    <rect
+      x="47"
+      y="103"
+      width="17"
+      height="43"
+      rx="8.5"
+      fill="#7C3AED"
+    />
+
+    <!-- گوش راست -->
+    <rect
+      x="176"
+      y="103"
+      width="17"
+      height="43"
+      rx="8.5"
+      fill="#0891B2"
+    />
+
+    <!-- صفحه داخلی صورت -->
+    <rect
+      x="72"
+      y="87"
+      width="96"
+      height="67"
+      rx="25"
+      fill="#0F172A"
+      fill-opacity="0.88"
+    />
+
+    <!-- چشم چپ -->
+    <circle
+      id="ai-eye-left"
+      cx="101"
+      cy="120"
+      r="8"
+      fill="#E0F2FE"
+    />
+
+    <!-- چشم راست -->
+    <circle
+      id="ai-eye-right"
+      cx="139"
+      cy="120"
+      r="8"
+      fill="#E0F2FE"
+    />
+
+    <!-- دهان / وضعیت پیش‌فرض -->
+    <path
+      id="ai-mouth"
+      d="M106 139C114 146 126 146 134 139"
+      stroke="#E0F2FE"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- آنتن -->
+  <g id="ai-antenna">
+    <path
+      d="M120 70V53"
+      stroke="#64748B"
+      stroke-width="5"
+      stroke-linecap="round"
+    />
+
+    <circle
+      id="ai-status-light"
+      cx="120"
+      cy="45"
+      r="9"
+      fill="#22D3EE"
+      filter="url(#ai-glow)"
+    />
+  </g>
+
+  <!-- نقاط تزئینی؛ بعداً می‌توانند نشان‌دهنده پردازش باشند -->
+  <g id="ai-particles" fill="#A5F3FC">
+    <circle cx="43" cy="62" r="4"/>
+    <circle cx="197" cy="75" r="3"/>
+    <circle cx="38" cy="174" r="3"/>
+    <circle cx="204" cy="169" r="4"/>
+  </g>
+</svg>
