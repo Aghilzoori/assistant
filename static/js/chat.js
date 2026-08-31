@@ -1,4 +1,3 @@
-
 const chatApp = document.getElementById('chatApp');
 const emptyHero = document.getElementById('emptyHero');
 const form = document.getElementById('chatForm');
@@ -302,6 +301,21 @@ form.addEventListener('submit', async (e) => {
             throw new Error('Stream error');
         }
 
+        // اگر این اولین پیام این چت بود، سرور یک چت جدید ساخته و id آن را
+        // در هدر برگردانده. باید action فرم و آدرس صفحه را با همین id
+        // به‌روزرسانی کنیم تا پیام‌های بعدی به همین چت اضافه شوند،
+        // نه اینکه هر پیام یک چت جدید بسازد.
+        const newChatId = res.headers.get('X-Chat-Id');
+        if (newChatId && form.dataset.urlTemplate) {
+            const placeholder = '00000000-0000-0000-0000-000000000000';
+            form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
+
+            if (form.dataset.pageUrlTemplate) {
+                const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
+                history.replaceState({}, '', pageUrl);
+            }
+        }
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let fullText = '';
@@ -327,16 +341,25 @@ form.addEventListener('submit', async (e) => {
 (function () {
     const TOTAL_FRAMES = 6;
     const FRAME_INTERVAL_MS = 50;
-    const framePaths = Array.from({ length: TOTAL_FRAMES }, (_, i) =>
-        "{% static 'images/loading/' %}" + "loading" + (i + 1) + ".svg"
+
+    const loadingBox = document.getElementById("aiLoading");
+    const frameImg = document.getElementById("aiLoadingFrame");
+
+    if (!loadingBox || !frameImg) return;
+
+    const loadingPath = loadingBox.dataset.loadingPath;
+
+    const framePaths = Array.from(
+        { length: TOTAL_FRAMES },
+        (_, i) => `${loadingPath}loading${i + 1}.svg`
     );
 
-    const frameImg = document.getElementById("aiLoadingFrame");
     let timerId = null;
     let currentIndex = 0;
 
     function startLoadingAnimation() {
-        if (timerId || !frameImg) return;
+        if (timerId) return;
+
         timerId = setInterval(() => {
             currentIndex = (currentIndex + 1) % TOTAL_FRAMES;
             frameImg.src = framePaths[currentIndex];
@@ -348,8 +371,9 @@ form.addEventListener('submit', async (e) => {
             clearInterval(timerId);
             timerId = null;
         }
+
         currentIndex = 0;
-        if (frameImg) frameImg.src = framePaths[0];
+        frameImg.src = framePaths[0];
     }
 
     window.startAiLoadingAnimation = startLoadingAnimation;

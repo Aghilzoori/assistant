@@ -28,16 +28,24 @@
         </section>
 
         {% if chat %}
-        <form class="chat-form" id="chatForm" method="post" action="{% url 'chat' chat.id %}">
+        <form class="chat-form" id="chatForm" method="post" action="{% url 'chat' chat.id %}"
+            data-url-template="{% url 'chat' '00000000-0000-0000-0000-000000000000' %}"
+            data-page-url-template="{% url 'chat_page' '00000000-0000-0000-0000-000000000000' %}">
             {% else %}
-            <form class="chat-form" id="chatForm" method="post" action="{% url 'send_message' %}">
+            <form class="chat-form" id="chatForm" method="post" action="{% url 'send_message' %}"
+                data-url-template="{% url 'chat' '00000000-0000-0000-0000-000000000000' %}"
+                data-page-url-template="{% url 'chat_page' '00000000-0000-0000-0000-000000000000' %}">
                 {% endif %}
                 {% csrf_token %}
                 <div class="input-glow">
-                    <div id="aiLoading" class="ai-loading" aria-label="Responding">
+                    {% load static %}
+
+                    <div id="aiLoading" class="ai-loading" aria-label="Responding"
+                        data-loading-path="{% static 'images/loading/' %}">
                         <img id="aiLoadingFrame" class="ai-loading-frame"
                             src="{% static 'images/loading/loading1.svg' %}" alt="">
                     </div>
+
                     <textarea name="text" id="chatInput" class="chat-input" placeholder="Ask anything you want"
                         aria-label="Message" autocomplete="off" required rows="1"></textarea>
                 </div>
@@ -101,12 +109,10 @@
             {% if item.pin %}
             <!-- Pinned chat: button should UNPIN -->
             <div class="chat-history-row">
-                <button type="button" class="chat-history-item active"><a
-                        href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
+                <button type="button" class="chat-history-item active"><a href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
                 <div class="chat-history-actions" aria-label="Chat operations">
                     <a href="{% url 'unpin_chat' item.id %}?next={{ request.get_full_path|urlencode }}">
-                        <button type="button" class="chat-action pin-action" title="Unpin"
-                            aria-label="Unpin">
+                        <button type="button" class="chat-action pin-action" title="Unpin" aria-label="Unpin">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
                                 <path d="m12 17 5-5-4-4-5 5"></path>
@@ -132,8 +138,7 @@
             {% else %}
             <!-- Unpinned chat: button should PIN -->
             <div class="chat-history-row">
-                <button type="button" class="chat-history-item active"><a
-                        href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
+                <button type="button" class="chat-history-item active"><a href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
                 <div class="chat-history-actions" aria-label="Chat operations">
                     <a href="{% url 'pin_chat' item.id %}?next={{ request.get_full_path|urlencode }}">
                         <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">

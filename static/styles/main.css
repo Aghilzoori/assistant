@@ -150,14 +150,14 @@ body {
     animation: messageAppear 0.35s ease both;
 }
 
-.ai-message {
+.assistant-message {
     align-self: flex-start;
     border-bottom-right-radius: 4px;
     background: var(--paper);
     border-color: var(--line);
 }
 
-.ai-message::before {
+.assistant-message::before {
     content: "BOT";
     position: absolute;
     top: -18px;

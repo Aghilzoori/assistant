@@ -1,19 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Messages, Chat
 from .forms import MessagesForms
-from .utils import ai, is_battery_on_charge
+from .utils import ai, is_battery_on_charge, get_messages
 from django.http import StreamingHttpResponse, JsonResponse
 
 def now_chat(request):
     return render(request, "chatbot/chat.html", {
         "messages": [],
         "chat": None,
-        "chats": Chat.objects.all().order_by('-pin'),
+        "chats": Chat.objects.all(),
         "first_message": None,
     })
 
 def chat_page(request, pk=None):
-    chats = Chat.objects.all().order_by('-pin')
+    chats = Chat.objects.all()
     chat = get_object_or_404(Chat, id=pk)
     messages = Messages.objects.filter(chat=chat)
     first_message = messages.first()
@@ -90,7 +90,7 @@ def chat(request, pk=None):
 
         for chunk in ai(
             "qwen3:8b",
-            {"role": "user", "content": text},
+            get_messages(chat.id),
             [],
             is_battery_on_charge(),
         ):
@@ -99,12 +99,15 @@ def chat(request, pk=None):
 
         Messages.objects.create(
             chat=chat,
-            role="ai",
+            role="assistant",
             text=full_text
         )
 
-    return StreamingHttpResponse(
+    response = StreamingHttpResponse(
         generate(),
         content_type="text/plain; charset=utf-8"
     )
+    response["X-Chat-Id"] = str(chat.id)
+    response["Access-Control-Expose-Headers"] = "X-Chat-Id"
+    return response
 # Create your views here.
