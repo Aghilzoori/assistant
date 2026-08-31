@@ -8,16 +8,49 @@ def now_chat(request):
     return render(request, "chatbot/chat.html", {
         "messages": [],
         "chat": None,
-        "chats": Chat.objects.all(),
+        "chats": Chat.objects.all().order_by('-pin'),
         "first_message": None,
     })
 
 def chat_page(request, pk=None):
-    chats = Chat.objects.all()
+    chats = Chat.objects.all().order_by('-pin')
     chat = get_object_or_404(Chat, id=pk)
     messages = Messages.objects.filter(chat=chat)
     first_message = messages.first()
     return render(request, "chatbot/chat.html", {"messages": messages, "chat": chat, "chats": chats, "first_message": first_message,})
+
+def delete_chat(request, pk):
+    chat = Chat.objects.get(id=pk)
+    chat.delete()
+    return redirect("now_chat")
+
+def pin_chat(request, pk):
+    chat = get_object_or_404(Chat, pk=pk)
+    
+    chat.pin = True
+
+    chat.save()
+
+    next_url = request.GET.get("next")
+
+    if next_url:
+        return redirect(next_url)
+
+    return redirect("now_chat")
+
+def unpin_chat(request, pk):
+    chat = get_object_or_404(Chat, pk=pk)
+    
+    chat.pin = False
+
+    chat.save()
+
+    next_url = request.GET.get("next")
+
+    if next_url:
+        return redirect(next_url)
+
+    return redirect("now_chat")
 
 def chat(request, pk=None):
     if request.method != "POST":

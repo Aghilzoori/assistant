@@ -4,22 +4,6 @@
 
 {% block blockname %}
 
-<style>
-    .ai-loading {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--ink);
-        /* رنگ فعلی برند خودت */
-    }
-
-    .ai-loading-frame {
-        width: 22px;
-        height: 22px;
-        display: block;
-    }
-</style>
-
 <div class="app-layout" id="appLayout">
     <div class="chat-app {% if not messages %}is-empty{% endif %}" id="chatApp">
         <div class="empty-hero" id="emptyHero">
@@ -114,34 +98,73 @@
         <div class="chat-history" id="chatHistory">
             <span class="chat-history-label">Recent chats</span>
             {% for item in chats %}
+            {% if item.pin %}
+            <!-- Pinned chat: button should UNPIN -->
             <div class="chat-history-row">
-                <button type="button" class="chat-history-item active"><a href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
+                <button type="button" class="chat-history-item active"><a
+                        href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
                 <div class="chat-history-actions" aria-label="Chat operations">
-                    <button type="button" class="chat-action pin-action" title="پین کردن" aria-label="پین کردن">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m12 17 5-5-4-4-5 5"></path>
-                            <path d="M8 21l4-4"></path>
-                            <path d="M15 3l6 6"></path>
-                        </svg>
-                    </button>
-                    <button type="button" class="chat-action delete-action" title="حذف" aria-label="حذف">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 7h16"></path>
-                            <path d="M10 11v6"></path>
-                            <path d="M14 11v6"></path>
-                            <path d="M6 7l1 13h10l1-13"></path>
-                            <path d="M9 7V4h6v3"></path>
-                        </svg>
-                    </button>
+                    <a href="{% url 'unpin_chat' item.id %}?next={{ request.get_full_path|urlencode }}">
+                        <button type="button" class="chat-action pin-action" title="Unpin"
+                            aria-label="Unpin">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m12 17 5-5-4-4-5 5"></path>
+                                <path d="M8 21l4-4"></path>
+                                <path d="M15 3l6 6"></path>
+                            </svg>
+                        </button>
+                    </a>
+                    <a href="{% url 'delete-chat' item.id %}">
+                        <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 7h16"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M6 7l1 13h10l1-13"></path>
+                                <path d="M9 7V4h6v3"></path>
+                            </svg>
+                        </button>
+                    </a>
                 </div>
             </div>
+            {% else %}
+            <!-- Unpinned chat: button should PIN -->
+            <div class="chat-history-row">
+                <button type="button" class="chat-history-item active"><a
+                        href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
+                <div class="chat-history-actions" aria-label="Chat operations">
+                    <a href="{% url 'pin_chat' item.id %}?next={{ request.get_full_path|urlencode }}">
+                        <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m12 17 5-5-4-4-5 5"></path>
+                                <path d="M8 21l4-4"></path>
+                                <path d="M15 3l6 6"></path>
+                            </svg>
+                        </button>
+                    </a>
+                    <a href="{% url 'delete-chat' item.id %}">
+                        <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 7h16"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M6 7l1 13h10l1-13"></path>
+                                <path d="M9 7V4h6v3"></path>
+                            </svg>
+                        </button>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
             {% endfor %}
         </div>
     </aside>
 
-    <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="نمایش چت‌ها">
+    <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Show chats">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
             stroke-linejoin="round">
             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -151,39 +174,5 @@
     </button>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 </div>
-
-<script>
-    (function () {
-        const TOTAL_FRAMES = 6;
-        const FRAME_INTERVAL_MS = 50;
-        const framePaths = Array.from({ length: TOTAL_FRAMES }, (_, i) =>
-            "{% static 'images/loading/' %}" + "loading" + (i + 1) + ".svg"
-        );
-
-        const frameImg = document.getElementById("aiLoadingFrame");
-        let timerId = null;
-        let currentIndex = 0;
-
-        function startLoadingAnimation() {
-            if (timerId || !frameImg) return;
-            timerId = setInterval(() => {
-                currentIndex = (currentIndex + 1) % TOTAL_FRAMES;
-                frameImg.src = framePaths[currentIndex];
-            }, FRAME_INTERVAL_MS);
-        }
-
-        function stopLoadingAnimation() {
-            if (timerId) {
-                clearInterval(timerId);
-                timerId = null;
-            }
-            currentIndex = 0;
-            if (frameImg) frameImg.src = framePaths[0];
-        }
-
-        window.startAiLoadingAnimation = startLoadingAnimation;
-        window.stopAiLoadingAnimation = stopLoadingAnimation;
-    })();
-</script>
 
 {% endblock blockname %}

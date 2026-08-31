@@ -6,29 +6,29 @@ const input = document.getElementById('chatInput');
 const messages = document.getElementById('messages');
 const loading = document.getElementById('aiLoading');
 const sendButton = document.getElementById('sendButton');
- 
- 
+
+
 // اگر صفحه با حالت خالی بارگذاری شده، فرم رو داخل کادر خوش‌آمدگویی جابه‌جا کن
 if (chatApp.classList.contains('is-empty')) {
     emptyHero.appendChild(form);
 }
- 
+
 function resizeTextarea() {
     const maxHeight = window.innerHeight * 0.30;
     chatInput.style.height = "auto";
     chatInput.style.height = Math.min(chatInput.scrollHeight, maxHeight) + "px";
     chatInput.style.overflowY = chatInput.scrollHeight > maxHeight ? "auto" : "hidden";
 }
- 
- 
+
+
 chatInput.addEventListener("input", resizeTextarea);
 window.addEventListener("resize", resizeTextarea);
 resizeTextarea();
- 
+
 // ---------- دکمه کپی و برچسب زبان برای بلوک‌های کد ----------
 const COPY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 const CHECK_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
- 
+
 const LANGUAGE_LABELS = {
     python: "Python", py: "Python",
     java: "Java",
@@ -52,7 +52,7 @@ const LANGUAGE_LABELS = {
     markdown: "Markdown", md: "Markdown",
     plaintext: "متن", text: "متن", txt: "متن"
 };
- 
+
 // تشخیص زبان از روی کلاس‌های استاندارد markdown مثل language-python / lang-python
 function getCodeLanguage(codeEl, preEl) {
     const sources = [codeEl ? codeEl.className : "", preEl.className || ""];
@@ -64,14 +64,14 @@ function getCodeLanguage(codeEl, preEl) {
     }
     return null;
 }
- 
+
 function getLanguageLabel(lang) {
     if (!lang) {
         return "Ai pro";
     }
     return LANGUAGE_LABELS[lang] || (lang.charAt(0).toUpperCase() + lang.slice(1));
 }
- 
+
 function setupCodeCopyButtons() {
     const codeBlocks = document.querySelectorAll(".message pre");
     codeBlocks.forEach(function (pre) {
@@ -82,10 +82,10 @@ function setupCodeCopyButtons() {
         ) {
             return;
         }
- 
+
         const codeEl = pre.querySelector("code");
         const lang = getCodeLanguage(codeEl, pre);
- 
+
         // ساخت ظرف کد
         const wrapper = document.createElement("div");
         wrapper.className = "code-wrapper";
@@ -93,13 +93,13 @@ function setupCodeCopyButtons() {
         pre.parentNode.insertBefore(wrapper, pre);
         // انتقال pre داخل wrapper
         wrapper.appendChild(pre);
- 
+
         // برچسب زبان، گوشه‌ی چپ بالا
         const langLabel = document.createElement("span");
         langLabel.className = "code-lang-label";
         langLabel.textContent = getLanguageLabel(lang);
         wrapper.appendChild(langLabel);
- 
+
         // ساخت دکمه کپی، گوشه‌ی راست بالا
         const copyButton = document.createElement("button");
         copyButton.type = "button";
@@ -108,14 +108,14 @@ function setupCodeCopyButtons() {
         copyButton.setAttribute("aria-label", "کپی کد");
         copyButton.innerHTML = COPY_ICON_SVG;
         wrapper.appendChild(copyButton);
- 
+
         copyButton.addEventListener("click", async function () {
             const code = pre.querySelector("code");
             const codeText = code ? code.innerText : pre.innerText;
             if (!codeText) {
                 return;
             }
- 
+
             function showCopied() {
                 copyButton.innerHTML = CHECK_ICON_SVG;
                 copyButton.classList.add("copied");
@@ -126,7 +126,7 @@ function setupCodeCopyButtons() {
                     copyButton.title = "کپی کد";
                 }, 2000);
             }
- 
+
             try {
                 await navigator.clipboard.writeText(codeText);
                 showCopied();
@@ -145,9 +145,9 @@ function setupCodeCopyButtons() {
         });
     });
 }
- 
+
 setupCodeCopyButtons();
- 
+
 // ---------- سایدبار (باز/بسته‌شدن در موبایل، انتخاب چت، چت جدید) ----------
 const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
@@ -158,17 +158,17 @@ const chatRows = document.querySelectorAll('.chat-history-row');
 const attachButton = document.getElementById('attachButton');
 const attachDropdown = document.getElementById('attachDropdown');
 const webImageSearch = document.getElementById('webImageSearch');
- 
+
 function openSidebar() {
     sidebar.classList.add('open');
     sidebarBackdrop.classList.add('active');
 }
- 
+
 function closeSidebar() {
     sidebar.classList.remove('open');
     sidebarBackdrop.classList.remove('active');
 }
- 
+
 if (sidebarToggle) {
     sidebarToggle.addEventListener('click', function () {
         if (sidebar.classList.contains('open')) {
@@ -178,33 +178,33 @@ if (sidebarToggle) {
         }
     });
 }
- 
+
 if (sidebarBackdrop) {
     sidebarBackdrop.addEventListener('click', closeSidebar);
 }
- 
+
 function setAttachMenu(open) {
     if (!attachButton || !attachDropdown) return;
     attachDropdown.classList.toggle('open', open);
     attachButton.setAttribute('aria-expanded', String(open));
 }
- 
+
 if (attachButton) {
     attachButton.addEventListener('click', function (event) {
         event.stopPropagation();
         setAttachMenu(!attachDropdown.classList.contains('open'));
     });
 }
- 
+
 document.addEventListener('click', function () { setAttachMenu(false); });
 if (attachDropdown) attachDropdown.addEventListener('click', function (event) { event.stopPropagation(); });
 if (webImageSearch) webImageSearch.addEventListener('click', function () { setAttachMenu(false); input.focus(); });
- 
+
 chatRows.forEach(function (row) {
     const item = row.querySelector('.chat-history-item');
     const pinButton = row.querySelector('.pin-action');
     const deleteButton = row.querySelector('.delete-action');
- 
+
     if (pinButton) {
         pinButton.addEventListener('click', function (event) {
             event.stopPropagation();
@@ -212,7 +212,7 @@ chatRows.forEach(function (row) {
             pinButton.title = row.classList.contains('pinned') ? 'برداشتن پین' : 'پین کردن';
         });
     }
- 
+
     if (deleteButton) {
         deleteButton.addEventListener('click', function (event) {
             event.stopPropagation();
@@ -220,7 +220,7 @@ chatRows.forEach(function (row) {
             setTimeout(function () { row.remove(); }, 220);
         });
     }
- 
+
     if (item) {
         item.addEventListener('click', function () {
             chatHistoryItems.forEach(function (i) { i.classList.remove('active'); });
@@ -229,14 +229,14 @@ chatRows.forEach(function (row) {
         });
     }
 });
- 
+
 if (newChatButton) {
     newChatButton.addEventListener('click', function () {
         // فعلاً صفحه رو تازه می‌کنه؛ اگر مسیر جدا برای «چت جدید» داری، اینجا به همون آدرس ریدایرکت کن
         window.location.reload();
     });
 }
- 
+
 // ارسال پیام با کلید Enter (Shift+Enter برای خط جدید)
 chatInput.addEventListener("keydown", function (event) {
     if (event.key !== "Enter") {
@@ -254,13 +254,13 @@ chatInput.addEventListener("keydown", function (event) {
         form.submit();
     }
 });
- 
+
 function exitEmptyState() {
     if (!chatApp.classList.contains('is-empty')) return;
     chatApp.classList.remove('is-empty');
     chatApp.appendChild(form);
 }
- 
+
 function addMessage(text, role) {
     const div = document.createElement('div');
     div.className = `message ${role}-message`;
@@ -273,43 +273,43 @@ function addMessage(text, role) {
     messages.scrollTop = messages.scrollHeight;
     return div;
 }
- 
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
- 
+
     const text = input.value.trim();
     if (!text) return;
- 
+
     const formData = new FormData(form);
- 
+
     exitEmptyState();
     addMessage(text, 'user');
     input.value = '';
     loading.style.display = 'flex';
     if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
     sendButton.disabled = true;
- 
+
     const aiMessageEl = addMessage('', 'ai');
     const aiTextEl = aiMessageEl.querySelector('.message-text');
- 
+
     try {
         const res = await fetch(form.action, {
             method: 'POST',
             body: formData
         });
- 
+
         if (!res.ok || !res.body) {
             throw new Error('Stream error');
         }
- 
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let fullText = '';
- 
+
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
- 
+
             const chunk = decoder.decode(value, { stream: true });
             fullText += chunk;
             aiTextEl.textContent = fullText;
@@ -324,3 +324,34 @@ form.addEventListener('submit', async (e) => {
         input.focus();
     }
 });
+(function () {
+    const TOTAL_FRAMES = 6;
+    const FRAME_INTERVAL_MS = 50;
+    const framePaths = Array.from({ length: TOTAL_FRAMES }, (_, i) =>
+        "{% static 'images/loading/' %}" + "loading" + (i + 1) + ".svg"
+    );
+
+    const frameImg = document.getElementById("aiLoadingFrame");
+    let timerId = null;
+    let currentIndex = 0;
+
+    function startLoadingAnimation() {
+        if (timerId || !frameImg) return;
+        timerId = setInterval(() => {
+            currentIndex = (currentIndex + 1) % TOTAL_FRAMES;
+            frameImg.src = framePaths[currentIndex];
+        }, FRAME_INTERVAL_MS);
+    }
+
+    function stopLoadingAnimation() {
+        if (timerId) {
+            clearInterval(timerId);
+            timerId = null;
+        }
+        currentIndex = 0;
+        if (frameImg) frameImg.src = framePaths[0];
+    }
+
+    window.startAiLoadingAnimation = startLoadingAnimation;
+    window.stopAiLoadingAnimation = stopLoadingAnimation;
+})();

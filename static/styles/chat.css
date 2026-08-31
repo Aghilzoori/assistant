@@ -944,6 +944,21 @@
         transform: translateX(0);
     }
 }
+
 a {
     text-decoration: none;
+}
+
+.ai-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    /* رنگ فعلی برند خودت */
+}
+
+.ai-loading-frame {
+    width: 22px;
+    height: 22px;
+    display: block;
 }
