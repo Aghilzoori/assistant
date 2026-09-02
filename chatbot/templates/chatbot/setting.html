@@ -1,0 +1,486 @@
+{% extends 'index.html' %}
+{% load static %}
+
+
+{% block blockname %}
+<div class="settings-page" id="settingsPage">
+
+    <div class="settings-topbar">
+        <a href="{% url 'now_chat' %}" class="settings-back" aria-label="Back to Chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"></path>
+            </svg>
+            <span>Back to Chat</span>
+        </a>
+        <h1>Account Settings</h1>
+    </div>
+
+    {% if messages %}
+    <div class="settings-messages">
+        {% for message in messages %}
+        <div class="settings-flash settings-flash-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="settings-body">
+
+        <!-- ---------- Profile Card ---------- -->
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <h2>Profile</h2>
+                <p>Your display name and profile picture</p>
+            </div>
+
+            <div class="settings-profile-row">
+                {% if account.avatar_url %}
+                <img src="{{ account.avatar_url }}" alt="" class="settings-avatar" />
+                {% else %}
+                <span class="settings-avatar settings-avatar-fallback">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M20 21a8 8 0 1 0-16 0"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </span>
+                {% endif %}
+
+                <div class="settings-plan-badge{% if account.is_pro %} is-pro{% endif %}">
+                    {% if account.is_pro %}
+                    <span>Pro Plan</span>
+                    {% else %}
+                    <span>Free Plan</span>
+                    <a href="#" class="settings-upgrade-link">Upgrade to Pro</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <form method="post" action="{% url 'edit-username' %}" class="settings-form" id="profileForm">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="profile">
+
+                <label class="settings-field">
+                    <span class="settings-field-label">Display Name</span>
+                    <input type="text" name="first_name" value="{{ request.user.profile.first_name|default:'' }}" placeholder="First name" required>
+                    <input type="text" name="last_name" value="{{ request.user.profile.last_name|default:'' }}" placeholder="Last name" required>
+                    <input type="tel" name="phone" value="{{ request.user.profile.phone|default:'' }}" placeholder="Phone number" required>
+                </label>
+
+                <button type="submit" class="settings-save-button">Save Name</button>
+            </form>
+        </section>
+
+        <!-- ---------- Password Change Card ---------- -->
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <h2>Password</h2>
+                <p>Do you want to change your password?</p>
+            </div>
+            <a href="{% url 'password_reset' %}" class="settings-upgrade-link">Forgot Password?</a>
+        </section>
+
+        <!-- ---------- Theme Card ---------- -->
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <h2>Appearance</h2>
+                <p>Choose between light and dark mode</p>
+            </div>
+
+            <div class="settings-theme-switcher" id="settingsThemeSwitcher" role="radiogroup" aria-label="Appearance">
+                <button type="button" class="settings-theme-option" data-theme-value="light" role="radio"
+                    aria-checked="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path
+                            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41">
+                        </path>
+                    </svg>
+                    <span>Light</span>
+                </button>
+                <button type="button" class="settings-theme-option" data-theme-value="dark" role="radio"
+                    aria-checked="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+                    </svg>
+                    <span>Dark</span>
+                </button>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<style>
+    /* ==========================================================================
+       Settings page styles - LTR (Left-to-Right) layout
+       Uses the same CSS variables (--ink, --paper, --paper-sunk, ...)
+       defined in main.css and chat.css for both light and dark modes.
+       ========================================================================== */
+
+    .settings-page {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        background: var(--paper-sunk);
+        padding: 28px clamp(16px, 6vw, 10%) 60px;
+        direction: ltr;
+        text-align: left;
+    }
+
+    .settings-topbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .settings-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        padding: 8px 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+
+        background: var(--paper);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 600;
+
+        transition: background 0.15s ease, border-color 0.15s ease;
+        text-decoration: none;
+    }
+
+    .settings-back:hover {
+        background: var(--paper-sunk);
+        border-color: var(--ink-soft);
+    }
+
+    .settings-back svg {
+        width: 16px;
+        height: 16px;
+        transform: scaleX(1);
+    }
+
+    .settings-topbar h1 {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        color: var(--ink);
+    }
+
+    .settings-messages {
+        max-width: 640px;
+        margin: 0 auto 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .settings-flash {
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+    }
+
+    .settings-flash-success {
+        border-color: #2e7d32;
+        color: #2e7d32;
+        background: rgba(46, 125, 50, 0.08);
+    }
+
+    .settings-flash-error {
+        border-color: #c62828;
+        color: #c62828;
+        background: rgba(198, 40, 40, 0.08);
+    }
+
+    .settings-body {
+        max-width: 640px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .settings-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--paper);
+        padding: 22px clamp(16px, 4vw, 26px);
+    }
+
+    .settings-card-head {
+        margin-bottom: 18px;
+    }
+
+    .settings-card-head h2 {
+        margin: 0 0 4px;
+        font-size: 15.5px;
+        font-weight: 700;
+        color: var(--ink);
+    }
+
+    .settings-card-head p {
+        margin: 0;
+        font-size: 12.5px;
+        color: var(--muted);
+    }
+
+    .settings-profile-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .settings-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: var(--paper-sunk);
+        border: 1px solid var(--line);
+        flex-shrink: 0;
+    }
+
+    .settings-avatar-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+    }
+
+    .settings-avatar-fallback svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .settings-plan-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
+
+    .settings-plan-badge span {
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--muted);
+        background: var(--paper-sunk);
+    }
+
+    .settings-plan-badge.is-pro span {
+        color: #7c3aed;
+        background: rgba(124, 58, 237, 0.12);
+    }
+
+    .settings-upgrade-link {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #7c3aed;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .settings-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .settings-field-label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--ink-soft);
+    }
+
+    .settings-field input {
+        padding: 11px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--ink);
+        background: var(--paper-sunk);
+
+        outline: none;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .settings-field input:focus {
+        border-color: var(--ink-soft);
+        background: var(--paper);
+    }
+
+    .settings-field-error {
+        margin: -4px 0 0;
+        font-size: 12px;
+        color: #c62828;
+    }
+
+    .settings-save-button {
+        align-self: flex-start;
+        margin-top: 4px;
+
+        padding: 10px 22px;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+
+        background: var(--ink);
+        color: var(--paper);
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+
+        transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .settings-save-button:hover {
+        background: var(--ink-soft);
+    }
+
+    .settings-save-button:active {
+        transform: scale(0.97);
+    }
+
+    /* ---------- Theme Switcher ---------- */
+    .settings-theme-switcher {
+        display: flex;
+        gap: 10px;
+    }
+
+    .settings-theme-option {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+
+        padding: 16px 10px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+
+        background: var(--paper-sunk);
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .settings-theme-option svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .settings-theme-option:hover {
+        border-color: var(--line-strong);
+    }
+
+    .settings-theme-option.is-active {
+        border-color: var(--ink);
+        color: var(--ink);
+        background: var(--paper);
+    }
+
+    @media (max-width: 560px) {
+        .settings-topbar {
+            flex-wrap: wrap;
+        }
+
+        .settings-profile-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .settings-plan-badge {
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<script>
+    // Self-contained settings script (independent from chat.js)
+    (function () {
+        const switcher = document.getElementById('settingsThemeSwitcher');
+        const options = switcher ? switcher.querySelectorAll('.settings-theme-option') : [];
+
+        function currentTheme() {
+            return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        }
+
+        function syncActiveOption() {
+            const active = currentTheme();
+            options.forEach(function (btn) {
+                const isActive = btn.dataset.themeValue === active;
+                btn.classList.toggle('is-active', isActive);
+                btn.setAttribute('aria-checked', String(isActive));
+            });
+        }
+
+        function setTheme(value) {
+            document.documentElement.setAttribute('data-theme', value);
+            try {
+                localStorage.setItem('theme', value);
+            } catch (e) {
+                // localStorage not available, applies only for this session
+            }
+            syncActiveOption();
+        }
+
+        options.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setTheme(btn.dataset.themeValue);
+            });
+        });
+
+        syncActiveOption();
+
+        // ---------- Password Form Validation ----------
+        const passwordForm = document.getElementById('passwordForm');
+        const newPassword = document.getElementById('newPassword');
+        const newPasswordConfirm = document.getElementById('newPasswordConfirm');
+        const mismatchError = document.getElementById('passwordMismatchError');
+
+        if (passwordForm && newPassword && newPasswordConfirm && mismatchError) {
+            passwordForm.addEventListener('submit', function (event) {
+                if (newPassword.value !== newPasswordConfirm.value) {
+                    event.preventDefault();
+                    mismatchError.hidden = false;
+                    newPasswordConfirm.focus();
+                } else {
+                    mismatchError.hidden = true;
+                }
+            });
+
+            // Hide error message on typing to avoid confusion
+            [newPassword, newPasswordConfirm].forEach(function (field) {
+                field.addEventListener('input', function () {
+                    mismatchError.hidden = true;
+                });
+            });
+        }
+    })();
+</script>
+{% endblock blockname %}

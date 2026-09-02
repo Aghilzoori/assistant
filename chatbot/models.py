@@ -1,18 +1,14 @@
 from django.db import models
 import uuid
 from ckeditor.fields import RichTextField
+from home.models import Profile
 
 class Chat(models.Model):
+    user = models.ForeignKey(Profile, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     pin = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
-
-    id = models.UUIDField(
-        default=uuid.uuid4,
-        unique=True,
-        primary_key=True,
-        editable=False
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True, editable=False)
 
     class Meta:
         ordering = ["-pin", "-created"]
@@ -22,11 +18,7 @@ class Chat(models.Model):
 
 
 class Messages(models.Model):
-    chat = models.ForeignKey(
-        Chat,
-        on_delete=models.CASCADE,
-        related_name="messages"
-    )
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
     text = RichTextField()
     role = models.CharField(max_length=100)
     created = models.DateTimeField(auto_now_add=True)

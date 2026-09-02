@@ -1,0 +1,1028 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block blockname %}
+
+<style>
+    /* ================================================================
+       HOME PAGE - GLASSMORPHISM DESIGN v2
+       ================================================================ */
+
+    .home-page {
+        min-height: 100vh;
+        background: var(--paper-sunk);
+        position: relative;
+        overflow-y: auto;
+        /* ← مهم برای اسکرول */
+        overflow-x: hidden;
+        font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+        direction: ltr;
+        padding-bottom: 40px;
+    }
+
+    /* ---------- Animated Background ---------- */
+    .home-bg-glow {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .home-bg-glow .glow-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.6;
+        animation: float-orb 12s ease-in-out infinite alternate;
+    }
+
+    .home-bg-glow .glow-orb:nth-child(1) {
+        width: 500px;
+        height: 500px;
+        background: #7c3aed33;
+        top: -100px;
+        right: -100px;
+        animation-delay: 0s;
+    }
+
+    .home-bg-glow .glow-orb:nth-child(2) {
+        width: 400px;
+        height: 400px;
+        background: #2563eb33;
+        bottom: -50px;
+        left: -50px;
+        animation-delay: -4s;
+    }
+
+    .home-bg-glow .glow-orb:nth-child(3) {
+        width: 350px;
+        height: 350px;
+        background: #ec489933;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation-delay: -8s;
+    }
+
+    @keyframes float-orb {
+        0% {
+            transform: translate(0, 0) scale(1);
+        }
+
+        33% {
+            transform: translate(30px, -40px) scale(1.1);
+        }
+
+        66% {
+            transform: translate(-20px, 20px) scale(0.9);
+        }
+
+        100% {
+            transform: translate(10px, -10px) scale(1.05);
+        }
+    }
+
+    /* ---------- Top Navigation Bar ---------- */
+    .home-nav {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    [data-theme="dark"] .home-nav {
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .home-nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--ink);
+        text-decoration: none;
+    }
+
+    .home-nav-brand svg {
+        width: 28px;
+        height: 28px;
+        color: #7c3aed;
+    }
+
+    .home-nav-links {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .nav-link {
+        padding: 8px 18px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-soft);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    .nav-link:hover {
+        background: rgba(124, 58, 237, 0.08);
+        color: var(--ink);
+    }
+
+    .nav-link.active {
+        background: rgba(124, 58, 237, 0.12);
+        color: #7c3aed;
+        border-color: rgba(124, 58, 237, 0.2);
+    }
+
+    .nav-link-btn {
+        padding: 8px 20px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .nav-link-btn.primary {
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        color: #fff;
+    }
+
+    .nav-link-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+    }
+
+    .nav-link-btn.outline {
+        background: transparent;
+        color: var(--ink-soft);
+        border: 1px solid var(--line-strong);
+    }
+
+    .nav-link-btn.outline:hover {
+        background: var(--paper-sunk);
+        border-color: var(--ink);
+    }
+
+    .nav-link-btn.danger {
+        background: transparent;
+        color: #ef4444;
+        border: 1px solid #ef444444;
+    }
+
+    .nav-link-btn.danger:hover {
+        background: #ef444411;
+    }
+
+    /* ---------- Main Container ---------- */
+    .home-container {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 24px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 48px;
+    }
+
+    /* ---------- Hero Section ---------- */
+    .home-hero {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 24px;
+        padding: 60px 32px 48px;
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 32px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    [data-theme="dark"] .home-hero {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    }
+
+    .home-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #7c3aed;
+        background: rgba(124, 58, 237, 0.12);
+        border: 1px solid rgba(124, 58, 237, 0.2);
+        letter-spacing: 0.3px;
+    }
+
+    [data-theme="dark"] .home-hero-badge {
+        background: rgba(124, 58, 237, 0.2);
+    }
+
+    .home-hero-badge .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #7c3aed;
+        animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.4;
+            transform: scale(0.8);
+        }
+    }
+
+    .home-hero-icon {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        color: #fff;
+        box-shadow: 0 12px 40px rgba(124, 58, 237, 0.3);
+    }
+
+    .home-hero-icon svg {
+        width: 40px;
+        height: 40px;
+    }
+
+    .home-hero h1 {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        margin: 0;
+        color: var(--ink);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+    }
+
+    .home-hero h1 .highlight {
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .home-hero p {
+        max-width: 560px;
+        font-size: 1.1rem;
+        line-height: 1.7;
+        color: var(--ink-soft);
+        margin: 0;
+    }
+
+    /* ---------- CTA Button ---------- */
+    .home-cta-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 8px;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 32px;
+        border: none;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        text-decoration: none;
+        box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 12px 40px rgba(124, 58, 237, 0.4);
+    }
+
+    .btn-primary:active {
+        transform: scale(0.97);
+    }
+
+    .btn-primary svg {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.25s ease;
+    }
+
+    .btn-primary:hover svg {
+        transform: translateX(4px);
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        border: 1px solid var(--line-strong);
+        border-radius: 16px;
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--ink-soft);
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        text-decoration: none;
+    }
+
+    [data-theme="dark"] .btn-secondary {
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--ink);
+        color: var(--ink);
+        transform: translateY(-2px);
+    }
+
+    /* ---------- Features Grid ---------- */
+    .home-features {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    .feature-card {
+        padding: 28px 24px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    [data-theme="dark"] .feature-card {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .feature-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(124, 58, 237, 0.3);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+    }
+
+    .feature-card .icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: rgba(124, 58, 237, 0.12);
+        color: #7c3aed;
+    }
+
+    .feature-card .icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .feature-card h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--ink);
+    }
+
+    .feature-card p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+
+    /* ---------- Media Showcase Section ---------- */
+    .home-media-section {
+        width: 100%;
+    }
+
+    .home-media-section .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ink);
+        margin: 0 0 18px;
+        text-align: center;
+    }
+
+    .home-media-section .section-sub {
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+        margin: -12px 0 24px;
+    }
+
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .media-card {
+        border-radius: 20px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        aspect-ratio: 16/10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    [data-theme="dark"] .media-card {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .media-card:hover {
+        transform: translateY(-4px) scale(1.01);
+        border-color: rgba(124, 58, 237, 0.2);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    .media-card img,
+    .media-card video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .media-card .media-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+        color: #fff;
+        font-size: 12px;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        text-align: left;
+    }
+
+    .media-card:hover .media-overlay {
+        opacity: 1;
+    }
+
+    .media-card .media-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 600;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* ---------- Upload Cards (Demo Mode) ---------- */
+    .home-upload-section {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    .upload-card {
+        padding: 28px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 2px dashed rgba(255, 255, 255, 0.12);
+        text-align: center;
+        transition: all 0.3s ease;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: default;
+    }
+
+    [data-theme="dark"] .upload-card {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .upload-card .icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: rgba(124, 58, 237, 0.12);
+        color: #7c3aed;
+    }
+
+    .upload-card .icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .upload-card h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--ink);
+    }
+
+    .upload-card p {
+        margin: 0;
+        font-size: 12.5px;
+        color: var(--muted);
+    }
+
+    .upload-card .demo-badge {
+        font-size: 11px;
+        color: #7c3aed;
+        background: rgba(124, 58, 237, 0.1);
+        padding: 2px 14px;
+        border-radius: 100px;
+        font-weight: 600;
+    }
+
+    /* ---------- Footer ---------- */
+    .home-footer {
+        width: 100%;
+        text-align: center;
+        padding: 24px 0 8px;
+        border-top: 1px solid var(--line);
+        margin-top: 16px;
+    }
+
+    .home-footer p {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin: 0;
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 780px) {
+        .home-nav {
+            padding: 12px 16px;
+        }
+
+        .home-nav-brand {
+            font-size: 15px;
+        }
+
+        .home-nav-links {
+            gap: 4px;
+        }
+
+        .nav-link {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .nav-link-btn {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        .home-hero {
+            padding: 40px 20px 32px;
+        }
+
+        .home-hero h1 {
+            font-size: 1.8rem;
+        }
+
+        .home-hero p {
+            font-size: 1rem;
+        }
+
+        .home-upload-section {
+            grid-template-columns: 1fr;
+        }
+
+        .home-features {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .media-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+    }
+
+    @media (max-width: 480px) {
+        .home-hero h1 {
+            font-size: 1.5rem;
+        }
+
+        .home-features {
+            grid-template-columns: 1fr;
+        }
+
+        .home-hero-icon {
+            width: 60px;
+            height: 60px;
+        }
+
+        .home-hero-icon svg {
+            width: 30px;
+            height: 30px;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            padding: 12px 24px;
+            font-size: 14px;
+        }
+
+        .media-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .media-card {
+            aspect-ratio: 1/1;
+        }
+    }
+
+    /* ---------- Toast ---------- */
+    .home-toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 14px 28px;
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 9999;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+        max-width: 90%;
+        text-align: center;
+        pointer-events: none;
+    }
+
+    .home-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-10px);
+    }
+</style>
+
+<!-- ================================================================ -->
+<!-- HOME PAGE CONTENT                                                -->
+<!-- ================================================================ -->
+
+<div class="home-page">
+
+    <!-- Animated Background Orbs -->
+    <div class="home-bg-glow" aria-hidden="true">
+        <div class="glow-orb"></div>
+        <div class="glow-orb"></div>
+        <div class="glow-orb"></div>
+    </div>
+
+    <!-- ========== NAVIGATION ========== -->
+    <nav class="home-nav">
+        <a href="" class="home-nav-brand">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M12 2.5c.6 2.9 1.3 4.9 2.3 5.9 1 1 3 1.7 5.9 2.3-2.9.6-4.9 1.3-5.9 2.3-1 1-1.7 3-2.3 5.9-.6-2.9-1.3-4.9-2.3-5.9-1-1-3-1.7-5.9-2.3 2.9-.6 4.9-1.3 5.9-2.3 1-1 1.7-3 2.3-5.9z" />
+            </svg>
+            <span>AI Assistant</span>
+        </a>
+
+        <div class="home-nav-links">
+            <a href="" class="nav-link active">Home</a>
+            <a href="#" class="nav-link">Blog</a>
+
+            {% if user.is_authenticated %}
+            <a href="{% url 'now_chat' %}" class="nav-link-btn primary">Start Chat</a>
+            <a href="{% url 'setting' %}" class="nav-link-btn outline">Settings</a>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="nav-link-btn danger">Logout</button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}" class="nav-link-btn out line">Login</a>
+            <a href="{% url 'signup' %}" class="nav-link-btn primary">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="home-container">
+
+        <!-- ===== HERO ===== -->
+        <section class="home-hero">
+            <div class="home-hero-badge">
+                <span class="dot"></span>
+                AI Assistant • Always Available
+            </div>
+
+            <div class="home-hero-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path
+                        d="M12 2.5c.6 2.9 1.3 4.9 2.3 5.9 1 1 3 1.7 5.9 2.3-2.9.6-4.9 1.3-5.9 2.3-1 1-1.7 3-2.3 5.9-.6-2.9-1.3-4.9-2.3-5.9-1-1-3-1.7-5.9-2.3 2.9-.6 4.9-1.3 5.9-2.3 1-1 1.7-3 2.3-5.9z" />
+                    <circle cx="9" cy="10" r="0.5" fill="currentColor" />
+                    <circle cx="15" cy="10" r="0.5" fill="currentColor" />
+                    <path d="M9 14.5c.8 1 2 1.5 3 1.5s2.2-.5 3-1.5" />
+                </svg>
+            </div>
+
+            <h1>
+                Your AI Assistant,<br>
+                <span class="highlight">Ready to Help</span>
+            </h1>
+
+            <p>
+                Ask anything, get instant answers, generate ideas, and solve problems
+                — all powered by advanced artificial intelligence.
+            </p>
+
+            <div class="home-cta-group">
+                <a href="{% url 'now_chat' %}" class="btn-primary">
+                    Start Chat
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="12" y1="19" x2="12" y2="5" />
+                        <polyline points="6 11 12 5 18 11" />
+                    </svg>
+                </a>
+                <a href="#features" class="btn-secondary">
+                    Learn More
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" width="16" height="16">
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+        <!-- ===== FEATURES ===== -->
+        <div class="home-features" id="features">
+            <div class="feature-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M12 2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2 2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" />
+                        <path d="M6 10a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2" />
+                        <path d="M8 16h8" />
+                    </svg>
+                </div>
+                <h3>Smart Conversations</h3>
+                <p>Natural language understanding with context-aware responses</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                    </svg>
+                </div>
+                <h3>Media Support</h3>
+                <p>Upload images, videos, and GIFs for analysis and processing</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                        <line x1="12" y1="22.08" x2="12" y2="12" />
+                    </svg>
+                </div>
+                <h3>Privacy First</h3>
+                <p>Your data stays secure with end-to-end protection</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                </div>
+                <h3>24/7 Availability</h3>
+                <p>Always online, always ready to assist you</p>
+            </div>
+        </div>
+
+        <!-- ===== MEDIA SHOWCASE ===== -->
+        <div class="home-media-section">
+            <h2 class="section-title">🎬 Media Showcase</h2>
+            <p class="section-sub">Explore sample images and videos from our AI</p>
+
+            <div class="media-grid">
+                <!-- Image 1 -->
+                <div class="media-card">
+                    <img src="https://picsum.photos/seed/ai1/400/300" alt="AI Generated Image 1" loading="lazy">
+                    <span class="media-badge">📸 Image</span>
+                    <div class="media-overlay">AI Generated Artwork • 2024</div>
+                </div>
+
+                <!-- Image 2 -->
+                <div class="media-card">
+                    <img src="https://picsum.photos/seed/ai2/400/300" alt="AI Generated Image 2" loading="lazy">
+                    <span class="media-badge">📸 Image</span>
+                    <div class="media-overlay">AI Generated Landscape • 2024</div>
+                </div>
+
+                <!-- Video / GIF-like -->
+                <div class="media-card">
+                    <video src="https://www.w3schools.com/html/mov_bbb.mp4" muted loop playsinline
+                        onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                    </video>
+                    <span class="media-badge">🎬 Video</span>
+                    <div class="media-overlay">Sample Video • Hover to play</div>
+                </div>
+
+                <!-- GIF-like (loop animation) -->
+                <div class="media-card">
+                    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXp1Z2RjM2p6dGZtaDRpYnN0cGd0aDd1bGp0c3l0dXZ6eHp1bGJpNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7aTskHEUdgCQAXde/giphy.gif"
+                        alt="Animated GIF" loading="lazy" style="object-fit:cover;">
+                    <span class="media-badge">🎞️ GIF</span>
+                    <div class="media-overlay">Animated AI Demo • Loop</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== UPLOAD SECTION (Demo) ===== -->
+        <div class="home-upload-section">
+
+            <div class="upload-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                </div>
+                <h3>Image Upload</h3>
+                <p>Upload images for AI analysis<br><span style="font-size:11px;color:var(--muted);">PNG, JPG, WEBP
+                        supported</span></p>
+                <span class="demo-badge">🚀 Coming Soon</span>
+            </div>
+
+            <div class="upload-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="2.18" />
+                        <line x1="8" y1="2" x2="8" y2="22" />
+                        <line x1="16" y1="2" x2="16" y2="22" />
+                        <line x1="2" y1="8" x2="22" y2="8" />
+                        <line x1="2" y1="16" x2="22" y2="16" />
+                        <polyline points="10 14 14 12 10 10" />
+                    </svg>
+                </div>
+                <h3>Video Upload</h3>
+                <p>Upload videos or GIFs for processing<br><span style="font-size:11px;color:var(--muted);">MP4, MOV,
+                        GIF supported</span></p>
+                <span class="demo-badge">🚀 Coming Soon</span>
+            </div>
+
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <div class="home-footer">
+            <p>✦ AI Assistant v2.0 • Built with Django & ❤️</p>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- JAVASCRIPT                                                       -->
+<!-- ================================================================ -->
+
+<script>
+    (function () {
+        'use strict';
+
+        // ---------- Smooth scroll for "Learn More" ----------
+        document.querySelector('.btn-secondary')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector('#features');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        // ---------- Video hover play ----------
+        document.querySelectorAll('.media-card video').forEach(function (video) {
+            video.addEventListener('mouseenter', function () {
+                this.play().catch(function () { });
+            });
+            video.addEventListener('mouseleave', function () {
+                this.pause();
+                this.currentTime = 0;
+            });
+        });
+
+        // ---------- Toast function (for future use) ----------
+        window.showToast = function (message) {
+            const existing = document.querySelector('.home-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'home-toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(function () {
+                toast.classList.add('show');
+            });
+
+            setTimeout(function () {
+                toast.classList.remove('show');
+                setTimeout(function () {
+                    toast.remove();
+                }, 400);
+            }, 3000);
+        };
+
+        console.log('🚀 Home page loaded successfully!');
+    })();
+</script>
+
+{% endblock blockname %}

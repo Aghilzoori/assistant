@@ -5,3 +5,4 @@ env/
 .python-version
 db.sqlite3
 staticfile
+.env

@@ -9,4 +9,6 @@ urlpatterns = [
     path("delete-chat/<uuid:pk>/", views.delete_chat, name="delete-chat"),
     path('chat/-<uuid:pk>-/pin', views.pin_chat, name='pin_chat'),
     path('chat/-<uuid:pk>-/unpin', views.unpin_chat, name='unpin_chat'),
+    path("setting/", views.show_setting, name="setting"),
+    path('edit-username', views.edit_username, name="edit-username")
 ]

@@ -3,7 +3,8 @@
     height: 100dvh;
     width: 100%;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--paper-sunk);
+    transition: background-color 0.25s ease;
 }
 
 .chat-app {
@@ -30,6 +31,21 @@
     margin: 0;
     background: var(--paper);
     overflow: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* حالت تاریک: چون .chat-app متغیرها رو محلی (مجدداً) تعریف کرده،
+   override سطح :root در main.css به تنهایی روی این بخش اثر نمی‌کنه؛
+   برای همین همینجا هم یک نسخه‌ی تاریک از همون متغیرها تعریف می‌شه. */
+[data-theme="dark"] .chat-app,
+[data-theme="dark"] .sidebar {
+    --ink: #f0f0f1;
+    --ink-soft: #c9c9cc;
+    --paper: #1c1c1e;
+    --paper-sunk: #151516;
+    --line: #2c2c2e;
+    --line-strong: #3d3d40;
+    --muted: #9a9a9e;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -173,8 +189,9 @@
 
 .user-message {
     align-self: flex-end;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
     border-bottom-left-radius: var(--radius-sm);
 }
 
@@ -195,7 +212,7 @@
 }
 
 .user-message .message-time {
-    color: var(--paper);
+    color: var(--muted);
 }
 
 .ai-message .message-time {
@@ -272,9 +289,8 @@
     font-size: 0.88em;
 }
 
-.user-message code:not(pre code) {
-    background: rgba(255, 255, 255, 0.16);
-}
+/* پیام کاربر الان زمینه‌ی روشن داره (هم‌رنگ با پیام ربات)، پس رنگ پیش‌فرض
+   کد داخل‌متنی (rgba سیاه‌رنگ بالاتر) براش هم مناسبه و نیازی به override نیست. */
 
 /* ظرف کد و دکمه کپی */
 .code-wrapper {
@@ -890,7 +906,101 @@
     transform: translateX(18px) scale(.97);
 }
 
-/* دکمه‌ی باز/بسته کردن سایدبار در موبایل */
+/* ---------- بخش اکانت کاربر، ته سایدبار ---------- */
+.sidebar-account {
+    flex-shrink: 0;
+    margin: 8px 10px 12px;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+
+    background: var(--paper);
+    text-decoration: none;
+    cursor: pointer;
+
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-account:hover {
+    background: var(--paper-sunk);
+    border-color: var(--line-strong);
+}
+
+.sidebar-account-avatar {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--paper-sunk);
+    border: 1px solid var(--line);
+}
+
+.sidebar-account-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+}
+
+.sidebar-account-avatar-fallback svg {
+    width: 20px;
+    height: 20px;
+}
+
+.sidebar-account-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-account-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-account-plan {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+
+    padding: 1px 8px;
+    border-radius: 20px;
+
+    font-size: 10.5px;
+    font-weight: 600;
+
+    color: var(--muted);
+    background: var(--paper-sunk);
+}
+
+/* نسخه‌ی پرو، رنگ متمایز برای برجسته‌شدن */
+.sidebar-account-plan.is-pro {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.12);
+}
+
+.sidebar-account-chevron {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--muted);
+    transform: rotate(180deg); /* جهت فلش هماهنگ با چیدمان RTL */
+}
+
+/* ---------- دکمه‌ی باز/بسته کردن سایدبار در موبایل ---------- */
 .sidebar-toggle {
     display: none;
     position: fixed;

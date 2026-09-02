@@ -24,7 +24,7 @@ function loadScript(src) {
 
 const markdownLibsReady = Promise.all([
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js'),
-                                      loadScript('https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js')
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js')
 ]).catch(function (err) {
     console.error('خطا در بارگذاری کتابخونه‌ی مارک‌داون، نمایش به‌صورت متن ساده انجام می‌شود:', err);
 });
@@ -41,7 +41,37 @@ function renderMarkdown(rawText) {
     return div.innerHTML;
 }
 
+// ---------- سوییچ حالت روشن/تاریک ----------
+// حالت اولیه (روشن/تاریک) از قبل توسط اسکریپت داخل <head> فایل index.html
+// روی <html data-theme="..."> ست شده تا از چشمک‌زدن صفحه جلوگیری بشه.
+// این بخش فقط مسئول رفتار کلیک روی دکیمه و ذخیره‌ی انتخاب کاربره.
+(function () {
+    const themeToggle = document.getElementById('themeToggle');
+    if (!themeToggle) return;
+
+    themeToggle.addEventListener('click', function () {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+
+        html.setAttribute('data-theme', next);
+
+        try {
+            localStorage.setItem('theme', next);
+        } catch (e) {
+            // اگر localStorage در دسترس نبود (حالت خصوصی مرورگر و مشابه)،
+            // فقط برای همین بار بازدید تغییر اعمال می‌شه و ذخیره نمی‌شه
+        }
+    });
+})();
+
+// ---------- منطق مخصوص صفحه‌ی چت ----------
+// این بخش فقط وقتی اجرا می‌شه که عنصر #chatApp توی صفحه وجود داشته باشه؛
+// چون chat.js از طریق index.html روی همه‌ی صفحه‌ها (مثل صفحه‌ی تنظیمات) لود
+// می‌شه، بدون این گارد، روی صفحاتی که چت توش نیست کرش می‌کرد و باعث می‌شد
+// کدهای بعدی (مثل دکمه‌ی تغییر رنگ) هم اجرا نشن.
 const chatApp = document.getElementById('chatApp');
+if (chatApp) {
 const emptyHero = document.getElementById('emptyHero');
 const form = document.getElementById('chatForm');
 const input = document.getElementById('chatInput');
@@ -307,9 +337,9 @@ function addMessage(text, role) {
     const div = document.createElement('div');
     div.className = `message ${role}-message`;
     div.innerHTML = `
-    <div class="message-text"></div>
-    <span class="message-time">${new Date().toLocaleString('fa-IR')}</span>
-    `;
+            <div class="message-text"></div>
+            <span class="message-time">${new Date().toLocaleString('fa-IR')}</span>
+        `;
     // پیام کاربر همیشه متن ساده است (خطر تزریق HTML نداره چون مستقیم از input میاد
     // و innerHTML ست نمی‌کنیم)؛ پیام دستیار ممکنه مارک‌داون داشته باشه که در محل
     // مصرف (حلقه‌ی استریم) جداگانه رندر می‌شه.
@@ -344,29 +374,29 @@ function addChatToSidebar(chatId, firstMessageText) {
     row.className = 'chat-history-row';
     row.dataset.chatId = chatId;
     row.innerHTML = `
-    <button type="button" class="chat-history-item active"><a href="${pageUrl}">${chatName}</a></button>
-    <div class="chat-history-actions" aria-label="Chat operations">
-    <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
-    <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="m12 17 5-5-4-4-5 5"></path>
-    <path d="M8 21l4-4"></path>
-    <path d="M15 3l6 6"></path>
-    </svg>
-    </button>
-    </a>
-    <a href="${deleteUrl}">
-    <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 7h16"></path>
-    <path d="M10 11v6"></path>
-    <path d="M14 11v6"></path>
-    <path d="M6 7l1 13h10l1-13"></path>
-    <path d="M9 7V4h6v3"></path>
-    </svg>
-    </button>
-    </a>
-    </div>
+        <button type="button" class="chat-history-item active"><a href="${pageUrl}">${chatName}</a></button>
+        <div class="chat-history-actions" aria-label="Chat operations">
+            <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
+                <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m12 17 5-5-4-4-5 5"></path>
+                        <path d="M8 21l4-4"></path>
+                        <path d="M15 3l6 6"></path>
+                    </svg>
+                </button>
+            </a>
+            <a href="${deleteUrl}">
+                <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7h16"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                        <path d="M6 7l1 13h10l1-13"></path>
+                        <path d="M9 7V4h6v3"></path>
+                    </svg>
+                </button>
+            </a>
+        </div>
     `;
 
     // چت جدید بالای لیست اضافه بشه (بعد از عنوان "Recent chats")
@@ -404,14 +434,14 @@ form.addEventListener('submit', async (e) => {
     const text = input.value.trim();
     if (!text) return;
 
-                      const formData = new FormData(form);
+    const formData = new FormData(form);
 
     exitEmptyState();
     addMessage(text, 'user');
     input.value = '';
     loading.style.display = 'flex';
     if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
-                      sendButton.disabled = true;
+    sendButton.disabled = true;
 
     const aiMessageEl = addMessage('', 'ai');
     const aiTextEl = aiMessageEl.querySelector('.message-text');
@@ -435,14 +465,14 @@ form.addEventListener('submit', async (e) => {
             const placeholder = '00000000-0000-0000-0000-000000000000';
             form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
 
-                      if (form.dataset.pageUrlTemplate) {
-                          const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
-                          history.replaceState({}, '', pageUrl);
-                      }
+            if (form.dataset.pageUrlTemplate) {
+                const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
+                history.replaceState({}, '', pageUrl);
+            }
 
-                      // اگر این چت هنوز توی سایدبار نیست (یعنی همین الان ساخته شده)
-                      // یک ردیف جدید براش بسازیم، بدون نیاز به رفرش صفحه
-                      addChatToSidebar(newChatId, text);
+            // اگر این چت هنوز توی سایدبار نیست (یعنی همین الان ساخته شده)
+            // یک ردیف جدید براش بسازیم، بدون نیاز به رفرش صفحه
+            addChatToSidebar(newChatId, text);
         }
 
         // منتظر بمانیم کتابخونه‌های مارک‌داون لود بشن (معمولاً خیلی سریع، از کش هم لود می‌شه)
@@ -456,7 +486,7 @@ form.addEventListener('submit', async (e) => {
             const { value, done } = await reader.read();
             if (done) break;
 
-                      const chunk = decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
             fullText += chunk;
             // در حین استریم هم مارک‌داون رو به HTML تبدیل می‌کنیم تا نمایش زنده
             // دقیقاً همون چیزی باشه که بعد از رفرش صفحه (توسط markdownify سرور) دیده می‌شه
@@ -471,10 +501,11 @@ form.addEventListener('submit', async (e) => {
     } finally {
         loading.style.display = 'none';
         if (window.stopAiLoadingAnimation) window.stopAiLoadingAnimation();
-                      sendButton.disabled = false;
+        sendButton.disabled = false;
         input.focus();
     }
 });
+} // پایان گارد if (chatApp) { ... }
 (function () {
     const TOTAL_FRAMES = 6;
     const FRAME_INTERVAL_MS = 50;

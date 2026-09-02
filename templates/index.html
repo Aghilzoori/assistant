@@ -5,6 +5,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    این اسکریپت عمداً همین‌جا، قبل از لود شدن CSS قرار گرفته.
+    هدف: قبل از این‌که مرورگر حتی یک فریم از صفحه رو رنگ کنه،
+    حالت تاریک/روشن ذخیره‌شده (یا ترجیح سیستم‌عامل کاربر) رو
+    روی <html> ست کنیم؛ وگرنه یک لحظه صفحه سفید چشمک می‌زنه
+    و بعد تاریک می‌شه (پدیده‌ی FOUC).
+  -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('theme');
+        var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {
+        // اگر localStorage در دسترس نبود (مثلاً حالت خصوصی مرورگر)، پیش‌فرض روشن بمونه
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="{% static 'styles/main.css' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +41,18 @@
       <div class="bot-avatar">
         <img src="{% static 'images/logo.svg' %}" alt="دستیار هوش مصنوعی" class="ai-assistant" />
       </div>
+
+      <button type="button" id="themeToggle" class="theme-toggle" aria-label="تغییر حالت روشن/تاریک" title="تغییر حالت روشن/تاریک">
+        <!-- آیکون ماه: فقط در حالت روشن نشون داده می‌شه (برای رفتن به تاریک) -->
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+        </svg>
+        <!-- آیکون خورشید: فقط در حالت تاریک نشون داده می‌شه (برای برگشت به روشن) -->
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+      </button>
     </header>
 
     {% block blockname %}
