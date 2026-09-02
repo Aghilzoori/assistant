@@ -1,3 +1,46 @@
+// ---------- بارگذاری پویای کتابخونه‌های مارک‌داون (برای نمایش زنده‌ی جواب مدل) ----------
+// چون در حالت رفرش، جنگو با فیلتر markdownify متن رو به HTML تبدیل می‌کنه،
+// اما در حالت استریم زنده (fetch)، این تبدیل باید سمت کلاینت هم انجام بشه،
+// وگرنه علامت‌های خام مارک‌داون (**، #، backtick و ...) بدون فرمت نمایش داده می‌شن.
+function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+            if (existing.dataset.loaded === 'true') return resolve();
+            existing.addEventListener('load', () => resolve());
+            existing.addEventListener('error', reject);
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = function () {
+            script.dataset.loaded = 'true';
+            resolve();
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+const markdownLibsReady = Promise.all([
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js'),
+                                      loadScript('https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js')
+]).catch(function (err) {
+    console.error('خطا در بارگذاری کتابخونه‌ی مارک‌داون، نمایش به‌صورت متن ساده انجام می‌شود:', err);
+});
+
+// تبدیل متن مارک‌داون به HTML امن؛ اگر کتابخونه‌ها لود نشده باشند، متن خام برمی‌گردد
+function renderMarkdown(rawText) {
+    if (window.marked && window.DOMPurify) {
+        const html = window.marked.parse(rawText);
+        return window.DOMPurify.sanitize(html);
+    }
+    // فال‌بک: خروجی متن ساده (بدون فرمت) تا حداقل خطا ندهد
+    const div = document.createElement('div');
+    div.textContent = rawText;
+    return div.innerHTML;
+}
+
 const chatApp = document.getElementById('chatApp');
 const emptyHero = document.getElementById('emptyHero');
 const form = document.getElementById('chatForm');
@@ -264,13 +307,95 @@ function addMessage(text, role) {
     const div = document.createElement('div');
     div.className = `message ${role}-message`;
     div.innerHTML = `
-            <div class="message-text"></div>
-            <span class="message-time">${new Date().toLocaleString('fa-IR')}</span>
-        `;
+    <div class="message-text"></div>
+    <span class="message-time">${new Date().toLocaleString('fa-IR')}</span>
+    `;
+    // پیام کاربر همیشه متن ساده است (خطر تزریق HTML نداره چون مستقیم از input میاد
+    // و innerHTML ست نمی‌کنیم)؛ پیام دستیار ممکنه مارک‌داون داشته باشه که در محل
+    // مصرف (حلقه‌ی استریم) جداگانه رندر می‌شه.
     div.querySelector('.message-text').textContent = text;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     return div;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function addChatToSidebar(chatId, firstMessageText) {
+    const chatHistory = document.getElementById('chatHistory');
+    if (!chatHistory) return;
+
+    // اگر این چت از قبل توی لیست هست، دیگه چیزی اضافه نکن
+    if (chatHistory.querySelector(`[data-chat-id="${chatId}"]`)) return;
+
+    const placeholder = '00000000-0000-0000-0000-000000000000';
+    const pageUrl = (chatHistory.dataset.chatPageTemplate || '').replace(placeholder, chatId);
+    const pinUrl = (chatHistory.dataset.pinTemplate || '').replace(placeholder, chatId);
+    const deleteUrl = (chatHistory.dataset.deleteTemplate || '').replace(placeholder, chatId);
+
+    // اسم چت دقیقاً مثل سرور: ۲۰ کاراکتر اول پیام
+    const chatName = escapeHtml(firstMessageText.slice(0, 20));
+
+    const row = document.createElement('div');
+    row.className = 'chat-history-row';
+    row.dataset.chatId = chatId;
+    row.innerHTML = `
+    <button type="button" class="chat-history-item active"><a href="${pageUrl}">${chatName}</a></button>
+    <div class="chat-history-actions" aria-label="Chat operations">
+    <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
+    <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m12 17 5-5-4-4-5 5"></path>
+    <path d="M8 21l4-4"></path>
+    <path d="M15 3l6 6"></path>
+    </svg>
+    </button>
+    </a>
+    <a href="${deleteUrl}">
+    <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h16"></path>
+    <path d="M10 11v6"></path>
+    <path d="M14 11v6"></path>
+    <path d="M6 7l1 13h10l1-13"></path>
+    <path d="M9 7V4h6v3"></path>
+    </svg>
+    </button>
+    </a>
+    </div>
+    `;
+
+    // چت جدید بالای لیست اضافه بشه (بعد از عنوان "Recent chats")
+    const label = chatHistory.querySelector('.chat-history-label');
+    if (label && label.nextSibling) {
+        chatHistory.insertBefore(row, label.nextSibling);
+    } else {
+        chatHistory.appendChild(row);
+    }
+
+    // فعال‌سازی دکمه‌های پین/حذف روی همین ردیف جدید (منطق مشابه ردیف‌های موجود)
+    const pinButton = row.querySelector('.pin-action');
+    const deleteButton = row.querySelector('.delete-action');
+
+    if (pinButton) {
+        pinButton.addEventListener('click', function (event) {
+            event.stopPropagation();
+            row.classList.toggle('pinned');
+            pinButton.title = row.classList.contains('pinned') ? 'برداشتن پین' : 'پین کردن';
+        });
+    }
+
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function (event) {
+            event.stopPropagation();
+            row.classList.add('removing');
+            setTimeout(function () { row.remove(); }, 220);
+        });
+    }
 }
 
 form.addEventListener('submit', async (e) => {
@@ -279,14 +404,14 @@ form.addEventListener('submit', async (e) => {
     const text = input.value.trim();
     if (!text) return;
 
-    const formData = new FormData(form);
+                      const formData = new FormData(form);
 
     exitEmptyState();
     addMessage(text, 'user');
     input.value = '';
     loading.style.display = 'flex';
     if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
-    sendButton.disabled = true;
+                      sendButton.disabled = true;
 
     const aiMessageEl = addMessage('', 'ai');
     const aiTextEl = aiMessageEl.querySelector('.message-text');
@@ -310,11 +435,18 @@ form.addEventListener('submit', async (e) => {
             const placeholder = '00000000-0000-0000-0000-000000000000';
             form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
 
-            if (form.dataset.pageUrlTemplate) {
-                const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
-                history.replaceState({}, '', pageUrl);
-            }
+                      if (form.dataset.pageUrlTemplate) {
+                          const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
+                          history.replaceState({}, '', pageUrl);
+                      }
+
+                      // اگر این چت هنوز توی سایدبار نیست (یعنی همین الان ساخته شده)
+                      // یک ردیف جدید براش بسازیم، بدون نیاز به رفرش صفحه
+                      addChatToSidebar(newChatId, text);
         }
+
+        // منتظر بمانیم کتابخونه‌های مارک‌داون لود بشن (معمولاً خیلی سریع، از کش هم لود می‌شه)
+        await markdownLibsReady;
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder('utf-8');
@@ -324,17 +456,22 @@ form.addEventListener('submit', async (e) => {
             const { value, done } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
+                      const chunk = decoder.decode(value, { stream: true });
             fullText += chunk;
-            aiTextEl.textContent = fullText;
+            // در حین استریم هم مارک‌داون رو به HTML تبدیل می‌کنیم تا نمایش زنده
+            // دقیقاً همون چیزی باشه که بعد از رفرش صفحه (توسط markdownify سرور) دیده می‌شه
+            aiTextEl.innerHTML = renderMarkdown(fullText);
             messages.scrollTop = messages.scrollHeight;
         }
+
+        // بعد از پایان استریم، دکمه‌های کپی کد رو برای بلوک‌های کد جدید فعال کن
+        setupCodeCopyButtons();
     } catch (err) {
         aiTextEl.textContent = 'خطا در دریافت پاسخ';
     } finally {
         loading.style.display = 'none';
         if (window.stopAiLoadingAnimation) window.stopAiLoadingAnimation();
-        sendButton.disabled = false;
+                      sendButton.disabled = false;
         input.focus();
     }
 });

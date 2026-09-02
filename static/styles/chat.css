@@ -482,7 +482,8 @@
 
 .attach-dropdown {
     position: absolute;
-    right: 0;
+    left: 0;
+    right: auto;
     bottom: calc(100% + 10px);
     width: 230px;
     padding: 8px;
@@ -490,12 +491,18 @@
     border-radius: 14px;
     background: var(--paper);
     box-shadow: 0 14px 35px rgba(0, 0, 0, .12);
+
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+
     transform: translateY(8px) scale(.96);
-    transform-origin: bottom right;
-    transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+    transform-origin: bottom left;
+
+    transition: opacity .18s ease,
+                transform .18s ease,
+                visibility .18s ease;
+
     z-index: 30;
 }
 
