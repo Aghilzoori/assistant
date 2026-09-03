@@ -1,6 +1,16 @@
 import ollama
 import psutil
 from .models import Messages
+import asyncio
+from ddgs import DDGS
+import requests
+import trafilatura
+from django.conf import settings
+
+
+BOT_TOKEN = "554944102:iwwBP9FHTJQNqg1zqByhoaGENuFxVYsCSt0"
+
+last_update_id = None
 
 def is_battery_on_charge():
     battery = psutil.sensors_battery()
@@ -103,3 +113,167 @@ def ai(model, message, tools=None, options=None):
 
     for Character in response:
         yield Character["message"]["content"]
+
+def send_bale_message(
+    text: str,
+    chat_id: int,
+    parse_mode: str = None
+):
+    url = f"https://tapi.bale.ai/bot{settings.BOT_TOKEN}/sendMessage"
+
+    data = {
+        "chat_id": chat_id,
+        "text": text,
+    }
+
+    if parse_mode:
+        data["parse_mode"] = parse_mode
+
+    response = requests.post(
+        url,
+        json=data,
+        timeout=30
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
+def get_user_messages():
+    global last_update_id
+
+    url = f"https://tapi.bale.ai/bot{BOT_TOKEN}/getUpdates"
+
+    params = {}
+
+    if last_update_id is not None:
+        params["offset"] = last_update_id + 1
+
+    response = requests.get(
+        url,
+        params=params,
+        timeout=30
+    )
+    response.raise_for_status()
+
+    result = response.json()
+
+    if not result.get("ok"):
+        raise Exception(result)
+
+    for update in result.get("result", []):
+        last_update_id = update["update_id"]
+
+        message = update.get("message")
+
+        if not message:
+            continue
+
+        user_id = message.get("from", {}).get("id")
+        chat_id = message.get("chat", {}).get("id")
+
+        if not user_id or not chat_id:
+            continue
+        print('*' * 99)
+        print("User ID:", user_id)
+
+        send_bale_message(
+            text=f"{user_id}",
+            chat_id=chat_id,
+            parse_mode="Markdown"
+        )
+
+
+
+class AsyncDDGS:
+    async def text(self, query, max_results=10):
+        return await asyncio.to_thread(
+            self._sync_text,
+            query,
+            max_results
+        )
+
+    def _sync_text(self, query, max_results):
+        try:
+            with DDGS() as ddgs:
+                results = list(
+                    ddgs.text(
+                        query,
+                        max_results=max_results
+                    )
+                )
+
+                print("Search results:", results)
+
+                return results
+
+        except Exception as error:
+            print("Search error:", repr(error))
+            return []
+
+async def extract_content_async(url: str):
+    def sync_extract():
+        try:
+            response = requests.get(
+                url,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 "
+                        "(X11; Linux x86_64) "
+                        "AppleWebKit/537.36 "
+                        "Chrome/120 Safari/537.36"
+                    )
+                },
+                timeout=15
+            )
+
+            response.raise_for_status()
+
+            content = trafilatura.extract(
+                response.text,
+                include_comments=False,
+                include_tables=True
+            )
+
+            return content.strip() if content else None
+
+        except Exception as error:
+            print(f"خطا در استخراج {url}: {repr(error)}")
+            return None
+
+    return await asyncio.to_thread(sync_extract)
+
+
+
+ddgs = AsyncDDGS()
+
+
+async def ai_web(subject: str):
+    result = []
+
+    result_search = await ddgs.text(
+        subject,
+        max_results=3
+    )
+
+    if not result_search:
+        print("No search result found.")
+        return result
+
+    for item in result_search:
+        url = item.get("href")
+
+        if not url:
+            continue
+
+        content = await extract_content_async(url)
+
+        if content:
+            result.append({
+                "title": item.get("title", ""),
+                "href": url,
+                "body": content,
+            })
+
+    return result
+

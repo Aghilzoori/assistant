@@ -230,6 +230,9 @@ const chatRows = document.querySelectorAll('.chat-history-row');
 const attachButton = document.getElementById('attachButton');
 const attachDropdown = document.getElementById('attachDropdown');
 const webImageSearch = document.getElementById('webImageSearch');
+const webSearchBadge = document.getElementById('webSearchBadge');
+const codeModeToggle = document.getElementById('codeModeToggle');
+const codeModelBadge = document.getElementById('codeModelBadge');
 
 function openSidebar() {
     sidebar.classList.add('open');
@@ -270,7 +273,49 @@ if (attachButton) {
 
 document.addEventListener('click', function () { setAttachMenu(false); });
 if (attachDropdown) attachDropdown.addEventListener('click', function (event) { event.stopPropagation(); });
-if (webImageSearch) webImageSearch.addEventListener('click', function () { setAttachMenu(false); input.focus(); });
+// وضعیت فعال/غیرفعال بودن جستجوی وب؛ تا وقتی خود کاربر دوباره کلیک نکنه،
+// روشن می‌مونه (یعنی برای چند پیام پشت‌سرهم هم فعال باقی می‌مونه، نه فقط یک بار)
+let webSearchEnabled = false;
+let codeModeEnabled = false;
+
+if (webImageSearch) {
+    webImageSearch.addEventListener('click', function () {
+        webSearchEnabled = !webSearchEnabled;
+        webImageSearch.classList.toggle('is-active', webSearchEnabled);
+        if (webSearchBadge) webSearchBadge.classList.toggle('is-visible', webSearchEnabled);
+        setAttachMenu(false);
+        input.focus();
+    });
+}
+
+// کلیک روی نشونگر جستجوی وب برای خاموش کردن
+if (webSearchBadge) {
+    webSearchBadge.addEventListener('click', function () {
+        webSearchEnabled = false;
+        if (webImageSearch) webImageSearch.classList.remove('is-active');
+        webSearchBadge.classList.remove('is-visible');
+    });
+}
+
+// فعال/غیرفعال کردن حالت کدنویسی
+if (codeModeToggle) {
+    codeModeToggle.addEventListener('click', function () {
+        codeModeEnabled = !codeModeEnabled;
+        codeModeToggle.classList.toggle('is-active', codeModeEnabled);
+        if (codeModelBadge) codeModelBadge.style.display = codeModeEnabled ? 'flex' : 'none';
+        setAttachMenu(false);
+        input.focus();
+    });
+}
+
+// کلیک روی نشونگر حالت کدنویسی برای خاموش کردن
+if (codeModelBadge) {
+    codeModelBadge.addEventListener('click', function () {
+        codeModeEnabled = false;
+        if (codeModeToggle) codeModeToggle.classList.remove('is-active');
+        codeModelBadge.style.display = 'none';
+    });
+}
 
 chatRows.forEach(function (row) {
     const item = row.querySelector('.chat-history-item');
@@ -435,6 +480,12 @@ form.addEventListener('submit', async (e) => {
     if (!text) return;
 
     const formData = new FormData(form);
+    if (webSearchEnabled) {
+        formData.append('use_web_search', '1');
+    }
+    if (codeModeEnabled) {
+        formData.append('use_code_model', '1');
+    }
 
     exitEmptyState();
     addMessage(text, 'user');

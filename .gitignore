@@ -3,6 +3,8 @@ __pycache__/
 env/
 *.py[cod]
 .python-version
-db.sqlite3
 staticfile
 .env
+db.sqlite3
+bale_bot.log
+django.log

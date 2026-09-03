@@ -175,3 +175,7 @@ MARKDOWNIFY = {
         ],
     }
 }
+
+#bale
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")

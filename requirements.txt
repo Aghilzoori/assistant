@@ -5,3 +5,7 @@ django-ckeditor==6.7.3
 markdown==3.10.3
 bleach==6.4.0
 python-dotenv==1.2.3
+requests==2.34.2
+ddgs==9.16.0
+lxml_html_clean==0.4.5
+trafilatura==2.2.0

@@ -37,17 +37,49 @@
                 data-page-url-template="{% url 'chat_page' '00000000-0000-0000-0000-000000000000' %}">
                 {% endif %}
                 {% csrf_token %}
-                <div class="input-glow">
-                    {% load static %}
+                <div class="input-column">
+                    <div class="input-glow">
+                        {% load static %}
 
-                    <div id="aiLoading" class="ai-loading" aria-label="Responding"
-                        data-loading-path="{% static 'images/loading/' %}">
-                        <img id="aiLoadingFrame" class="ai-loading-frame"
-                            src="{% static 'images/loading/loading1.svg' %}" alt="">
+                        <div id="aiLoading" class="ai-loading" aria-label="Responding"
+                            data-loading-path="{% static 'images/loading/' %}">
+                            <img id="aiLoadingFrame" class="ai-loading-frame"
+                                src="{% static 'images/loading/loading1.svg' %}" alt="">
+                        </div>
+
+                        <textarea name="text" id="chatInput" class="chat-input" placeholder="Ask anything you want"
+                            aria-label="Message" autocomplete="off" required rows="1"></textarea>
                     </div>
 
-                    <textarea name="text" id="chatInput" class="chat-input" placeholder="Ask anything you want"
-                        aria-label="Message" autocomplete="off" required rows="1"></textarea>
+                    <!-- نشونگر «جستجوی وب فعاله» و «حالت کدنویسی فعاله» -->
+                    <div class="input-tools-row">
+                        <button type="button" id="webSearchBadge" class="web-search-badge">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="7"></circle>
+                                <path d="m20 20-4-4"></path>
+                            </svg>
+                            <span>Web search on</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                                stroke-linecap="round" stroke-linejoin="round" class="web-search-badge-close">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                        <button type="button" id="codeModelBadge" class="code-model-badge" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="16 18 22 12 16 6"></polyline>
+                                <polyline points="8 6 2 12 8 18"></polyline>
+                            </svg>
+                            <span>Coding mode</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                                stroke-linecap="round" stroke-linejoin="round" class="code-model-badge-close">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="input-actions" aria-label="Chat tools">
                     <div class="attach-menu-wrap">
@@ -70,6 +102,14 @@
                                 </svg>
                                 <span>Search for files/images on the web<small>To connect to real web
                                         search</small></span>
+                            </button>
+                            <button type="button" class="attach-dropdown-item" id="codeModeToggle" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="16 18 22 12 16 6"></polyline>
+                                    <polyline points="8 6 2 12 8 18"></polyline>
+                                </svg>
+                                <span>Coding mode<small>Use qwen2.5-coder:7b model</small></span>
                             </button>
                         </div>
                     </div>
@@ -180,7 +220,7 @@
             اگه اسم متغیرهای واقعی توی views.py شما فرق داره، همین‌جا
             (سه خط {{ account.xxx }}) رو با اسم درست جایگزین کنید.
         -->
-        <a href="{% url 'setting' %}" class="sidebar-account" aria-label="حساب کاربری و تنظیمات">
+        <a href="{% url 'setting' %}" class="sidebar-account" aria-label="Account and settings">
             {% if account.avatar_url %}
             <img src="{{ account.avatar_url }}" alt="" class="sidebar-account-avatar" />
             {% else %}
@@ -194,7 +234,7 @@
             </span>
             {% endif %}
             <span class="sidebar-account-info">
-                <span class="sidebar-account-name">{{ request.user.first_name|default:"User" }}</span>
+                <span class="sidebar-account-name">{{ request.user.profile.first_name|default:"user" }}</span>
                 <span class="sidebar-account-plan{% if account.is_pro %} is-pro{% endif %}">
                     {% if account.is_pro %}Pro Plan{% else %}Free Plan{% endif %}
                 </span>
