@@ -5,25 +5,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!--
-    این اسکریپت عمداً همین‌جا، قبل از لود شدن CSS قرار گرفته.
-    هدف: قبل از این‌که مرورگر حتی یک فریم از صفحه رو رنگ کنه،
-    حالت تاریک/روشن ذخیره‌شده (یا ترجیح سیستم‌عامل کاربر) رو
-    روی <html> ست کنیم؛ وگرنه یک لحظه صفحه سفید چشمک می‌زنه
-    و بعد تاریک می‌شه (پدیده‌ی FOUC).
-  -->
-  <script>
-    (function () {
-      try {
-        var saved = localStorage.getItem('theme');
-        var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', theme);
-      } catch (e) {
-        // اگر localStorage در دسترس نبود (مثلاً حالت خصوصی مرورگر)، پیش‌فرض روشن بمونه
-      }
-    })();
-  </script>
+
   <link rel="stylesheet" href="{% static 'styles/main.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/home.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/login.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/password_reset_complete.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/password_reset_confirm.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/password_reset_done.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/password_reset_form.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/signup.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/setting.css' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap"
@@ -60,6 +51,14 @@
     {% endblock blockname %}
 
     <script src="{% static 'js/chat.js' %}"></script>
+    <script src="{% static 'js/home.js' %}"></script>
+    <script src="{% static 'js/login.js' %}"></script>
+    <script src="{% static 'js/password_reset_complete.js' %}"></script>
+    <script src="{% static 'js/password_reset_confirm.js' %}"></script>
+    <script src="{% static 'js/password_reset_done.js' %}"></script>
+    <script src="{% static 'js/password_reset_form.js' %}"></script>
+    <script src="{% static 'js/signup.js' %}"></script>
+    <script src="{% static 'js/setting.js' %}"></script>
 
 </body>
 
