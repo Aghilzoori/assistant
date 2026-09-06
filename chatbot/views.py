@@ -4,8 +4,10 @@ from django.contrib.auth.decorators import login_required
 import asyncio
 from .models import Messages, Chat
 from .forms import MessagesForms, ProfileForms
-from .utils import ai, is_battery_on_charge, get_messages, ai_web
+from .utils import ai, is_battery_on_charge, get_messages, WebSearch
 
+
+web_search = WebSearch()
 
 @login_required(login_url='login')
 def now_chat(request):
@@ -167,7 +169,7 @@ def chat(request, pk=None):
                 is_battery_on_charge()
             ):
                 full_text += chunk
-            results = asyncio.run(ai_web(full_text))
+            results = asyncio.run(web_search.handle_user_query(full_text))
             if results:
                 search_context = "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
                 for r in results:

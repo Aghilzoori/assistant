@@ -3,6 +3,7 @@ import psutil
 from .models import Messages
 import asyncio
 from ddgs import DDGS
+from .exceptions import SearchRequestError, ContentExtractionError
 import requests
 import trafilatura
 
@@ -106,35 +107,26 @@ def ai(model, message, tools=None, options=None):
     for Character in response:
         yield Character["message"]["content"]
 
-class AsyncDDGS:
-    async def text(self, query, max_results=10):
+class WebSearch:
+    async def search(self, query, max_results=10):
         return await asyncio.to_thread(
-            self._sync_text,
+            self._sync_search,
             query,
             max_results
         )
-
-    def _sync_text(self, query, max_results):
-        try:
-            with DDGS() as ddgs:
-                results = list(
-                    ddgs.text(
-                        query,
-                        max_results=max_results
-                    )
+    def _sync_search(self, query, max_results):
+        with DDGS() as ddgs:
+            results = list(
+                ddgs.text(
+                    query,
+                    max_results=max_results
                 )
+            )
 
-                print("Search results:", results)
+            return results
 
-                return results
-
-        except Exception as error:
-            print("Search error:", repr(error))
-            return []
-
-async def extract_content_async(url: str):
-    def sync_extract():
-        try:
+    async def extract_content(self, url: str):
+        def extract():
             response = requests.get(
                 url,
                 headers={
@@ -158,43 +150,36 @@ async def extract_content_async(url: str):
 
             return content.strip() if content else None
 
-        except Exception as error:
-            print(f"خطا در استخراج {url}: {repr(error)}")
-            return None
+        return await asyncio.to_thread(extract)
 
-    return await asyncio.to_thread(sync_extract)
+    async def handle_user_query(self, subject: str):
+        result = []
 
+        result_search = await self.search(
+            subject,
+            max_results=3
+        )
 
+        if not result_search:
+            raise SearchRequestError
 
-ddgs = AsyncDDGS()
+        for item in result_search:
+            url = item.get("href")
 
+            if not url:
+                continue
 
-async def ai_web(subject: str):
-    result = []
+            
+            try:
+                content = await self.extract_content(url)
+            except Exception:
+                continue
 
-    result_search = await ddgs.text(
-        subject,
-        max_results=3
-    )
+            if content:
+                result.append({
+                    "title": item.get("title", ""),
+                    "href": url,
+                    "body": content,
+                })
 
-    if not result_search:
-        print("No search result found.")
         return result
-
-    for item in result_search:
-        url = item.get("href")
-
-        if not url:
-            continue
-
-        content = await extract_content_async(url)
-
-        if content:
-            result.append({
-                "title": item.get("title", ""),
-                "href": url,
-                "body": content,
-            })
-
-    return result
-
