@@ -3,7 +3,7 @@ import psutil
 from .models import Messages
 import asyncio
 from ddgs import DDGS
-from .exceptions import SearchRequestError, ContentExtractionError
+from .exceptions import SearchRequestError
 import requests
 import trafilatura
 
