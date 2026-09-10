@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import StreamingHttpResponse, JsonResponse
+from django.http import StreamingHttpResponse, HttpResponseServerError
 from django.contrib.auth.decorators import login_required
 import asyncio
+from django.utils.decorators import method_decorator
+from django.views import View
 from .models import Messages, Chat
 from .forms import MessagesForms, ProfileForms
-from .utils import ai, is_battery_on_charge, get_messages, WebSearch
-
+from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion
 
 web_search = WebSearch()
 
@@ -98,125 +99,96 @@ def unpin_chat(request, pk):
 
     return redirect("now_chat")
 
+@method_decorator(login_required(login_url='login'), name="dispatch")
+class ChatView(View):
+    def post(self, request, pk=None):
+        if request.method != "POST":
+            return HttpResponseServerError(
+                "There is a problem with the request type. Please try again in a few minutes or contact support."
+            )
 
+        form = MessagesForms(request.POST)
 
-@login_required(login_url='login')
-def chat(request, pk=None):
-    if request.method != "POST":
-        return JsonResponse(
-            {"error": "Only POST allowed"},
-            status=405
-        )
- 
-    form = MessagesForms(request.POST)
- 
-    if not form.is_valid():
-        return JsonResponse(
-            {"error": "Invalid form"},
-            status=400
-        )
- 
-    text = form.cleaned_data["text"].strip()
- 
-    use_web_search = request.POST.get("use_web_search") == "1"
-    use_code_model = request.POST.get("use_code_model") == "1"
-    profile = request.user.profile
+        if not form.is_valid():
+            return HttpResponseServerError(
+                "There is a problem with the message. Try again in a few minutes or contact support."
+            )
 
+        text = form.cleaned_data["text"].strip()
 
-    if pk is None:
-        chat = Chat.objects.create(
-            user=profile,
-            name=text[:20]
+        use_web_search = request.POST.get("use_web_search") == "1"
+        use_code_model = request.POST.get("use_code_model") == "1"
+        profile = request.user.profile
+
+        if pk is None:
+            chat = Chat.objects.create(user=profile, name=text[:20])
+        else:
+            chat = get_object_or_404(Chat, id=pk)
+
+        Messages.objects.create(chat=chat, role="user", text=text)
+
+        response = StreamingHttpResponse(
+            self._generate_response(chat, text, use_web_search, use_code_model),
+            content_type="text/plain; charset=utf-8",
         )
-    else:
-        chat = get_object_or_404(
-            Chat,
-            id=pk
-        )
- 
-    Messages.objects.create(
-        chat=chat,
-        role="user",
-        text=text
-    )
- 
-    def generate():
+
+        response["X-Chat-Id"] = str(chat.id)
+        response["Access-Control-Expose-Headers"] = "X-Chat-Id"
+        return response
+
+    def _generate_response(self, chat, text, use_web_search, use_code_model):
         full_text = ""
-        
+
         if use_code_model:
             model_name = "qwen2.5-coder:7b"
         else:
             model_name = "qwen3:8b"
-        
-        messages_for_model = get_messages(chat.id)
 
-        search_messages = [
-            {
-                "role": "user",
-                "content": (
-                    "متن من را برای جستجو داخل یک موتور جستجو آماده کن. "
-                    f"فقط عبارت مناسب جستجو را برگردان.\nمتن: {text}"
-                )
-            }
-        ]
+        messages_for_model = HistoryCompressor.compress(chat.id)
 
         if use_web_search:
+            search_messages = [
+                {
+                    "role": "user",
+                    "content": (
+                        "متن من را برای جستجو داخل یک موتور جستجو آماده کن. "
+                        f"فقط عبارت مناسب جستجو را برگردان.\nمتن: {text}"
+                    ),
+                }
+            ]
             full_text = ""
-            for chunk in ai(
+            for chunk in stream_chat_completion(
                 "qwen3:8b",
                 search_messages,
                 [],
-                is_battery_on_charge()
+                get_optimal_compute_config(),
             ):
                 full_text += chunk
+
             results = asyncio.run(web_search.handle_user_query(full_text))
             if results:
-                search_context = "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
+                search_context = (
+                    "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
+                )
                 for r in results:
-                    search_context += f"- {r['title']}\n  {r['body']}\n  منبع: {r['href']}\n\n"
- 
+                    search_context += (
+                        f"- {r['title']}\n  {r['body']}\n  منبع: {r['href']}\n\n"
+                    )
+
                 messages_for_model.insert(
                     len(messages_for_model) - 1,
                     {"role": "system", "content": search_context},
                 )
-        if use_code_model:
-            system_message = {
-                "role": "system",
-                "content": (
-                    "تو یک دستیار برنامه‌نویسی حرفه‌ای هستی که به سوالات کدنویسی پاسخ می‌دهی.\n"
-                    "پاسخ‌هایت باید شامل کدهای تمیز، توضیحات مفید و بهترین روش‌های برنامه‌نویسی باشد.\n"
-                    "در صورت امکان، مثال‌های کاربردی ارائه بده و خطاهای رایج را توضیح بده."
-                )
-            }
-            # اضافه کردن پیام سیستم به ابتدای لیست
-            if messages_for_model and messages_for_model[0].get("role") == "system":
-                messages_for_model[0]["content"] = system_message["content"] + "\n\n" + messages_for_model[0]["content"]
-            else:
-                messages_for_model.insert(0, system_message)
- 
-        for chunk in ai(
+
+        for chunk in stream_chat_completion(
             model_name,
             messages_for_model,
             [],
-            is_battery_on_charge(),
+            get_optimal_compute_config(),
         ):
             full_text += chunk
             yield chunk
- 
-        Messages.objects.create(
-            chat=chat,
-            role="assistant",
-            text=full_text
-        )
- 
-    response = StreamingHttpResponse(
-        generate(),
-        content_type="text/plain; charset=utf-8"
-    )
-
-    response["X-Chat-Id"] = str(chat.id)
-    response["Access-Control-Expose-Headers"] = "X-Chat-Id"
-    return response
+        Messages.objects.create(chat=chat, role="assistant", text=full_text)
 
 
 
