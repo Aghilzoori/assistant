@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'home.apps.ChatbotConfig',
     'ckeditor',
     'markdownify',
+    'api',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
