@@ -102,11 +102,6 @@ def unpin_chat(request, pk):
 @method_decorator(login_required(login_url='login'), name="dispatch")
 class ChatView(View):
     def post(self, request, pk=None):
-        if request.method != "POST":
-            return HttpResponseServerError(
-                "There is a problem with the request type. Please try again in a few minutes or contact support."
-            )
-
         form = MessagesForms(request.POST)
 
         if not form.is_valid():
@@ -123,7 +118,7 @@ class ChatView(View):
         if pk is None:
             chat = Chat.objects.create(user=profile, name=text[:20])
         else:
-            chat = get_object_or_404(Chat, id=pk)
+            chat = get_object_or_404(Chat, id=pk, user=profile)
 
         Messages.objects.create(chat=chat, role="user", text=text)
 
