@@ -144,19 +144,244 @@ if (chatApp) {
         return LANGUAGE_LABELS[lang] || (lang.charAt(0).toUpperCase() + lang.slice(1));
     }
 
+    // پسوند فایل مناسب برای هر زبان، برای اسم‌گذاری فایل دانلودی
+    const LANGUAGE_EXTENSIONS = {
+        python: "py",
+        java: "java",
+        javascript: "js",
+        typescript: "ts",
+        bash: "sh", sh: "sh", shell: "sh", zsh: "sh", powershell: "ps1",
+        json: "json",
+        html: "html", xml: "xml",
+        css: "css", scss: "scss",
+        sql: "sql",
+        c: "c", cpp: "cpp", "c++": "cpp",
+        csharp: "cs", "c#": "cs", cs: "cs",
+        php: "php",
+        go: "go", golang: "go",
+        rust: "rs", rs: "rs",
+        ruby: "rb", rb: "rb",
+        kotlin: "kt",
+        swift: "swift",
+        yaml: "yaml", yml: "yaml",
+        dockerfile: "Dockerfile",
+        markdown: "md", md: "md",
+        plaintext: "txt", text: "txt", txt: "txt"
+    };
+
+    function getLanguageExtension(lang) {
+        if (!lang) return "txt";
+        return LANGUAGE_EXTENSIONS[lang] || lang;
+    }
+
+    // حداقل تعداد خط برای اینکه یک بلوک کد به‌جای نمایش مستقیم،
+    // به‌صورت کارت «فایل» (با دکمه‌ی دانلود و پیش‌نمایش کنار صفحه) نشون داده بشه
+    const FILE_CARD_LINE_THRESHOLD = 10;
+
+    const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+    const DOWNLOAD_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+    const CLOSE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+    function countLines(text) {
+        if (!text) return 0;
+        // اگه خط آخر فقط یک enter اضافه‌ست، جزو خطوط واقعی حساب نشه
+        const trimmed = text.replace(/\n$/, "");
+        return trimmed.length ? trimmed.split("\n").length : 0;
+    }
+
+    function downloadTextFile(filename, text) {
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    // ---------- پنل پیش‌نمایش فایل، کنار صفحه ----------
+    let filePreviewOverlay, filePreviewPanel, filePreviewNameEl, filePreviewMetaEl,
+        filePreviewCodeEl, filePreviewCopyBtn, filePreviewDownloadBtn, filePreviewCloseBtn;
+    let currentPreviewText = "";
+    let currentPreviewFilename = "";
+
+    function buildFilePreviewPanel() {
+        if (filePreviewPanel) return;
+
+        filePreviewOverlay = document.createElement("div");
+        filePreviewOverlay.className = "file-preview-overlay";
+        filePreviewOverlay.id = "filePreviewOverlay";
+
+        filePreviewPanel = document.createElement("aside");
+        filePreviewPanel.className = "file-preview-panel";
+        filePreviewPanel.id = "filePreviewPanel";
+        filePreviewPanel.setAttribute("aria-label", "پیش‌نمایش فایل");
+        filePreviewPanel.innerHTML = `
+            <div class="file-preview-header">
+                <div class="file-preview-info">
+                    <span class="file-preview-icon">${FILE_ICON_SVG}</span>
+                    <div class="file-preview-titles">
+                        <span class="file-preview-name" id="filePreviewName"></span>
+                        <span class="file-preview-meta" id="filePreviewMeta"></span>
+                    </div>
+                </div>
+                <div class="file-preview-actions">
+                    <button type="button" class="file-preview-btn" id="filePreviewCopyBtn" title="کپی" aria-label="کپی">${COPY_ICON_SVG}</button>
+                    <button type="button" class="file-preview-btn" id="filePreviewDownloadBtn" title="دانلود" aria-label="دانلود">${DOWNLOAD_ICON_SVG}</button>
+                    <button type="button" class="file-preview-btn file-preview-close" id="filePreviewCloseBtn" title="بستن" aria-label="بستن">${CLOSE_ICON_SVG}</button>
+                </div>
+            </div>
+            <pre class="file-preview-body"><code id="filePreviewCode"></code></pre>
+        `;
+
+        document.body.appendChild(filePreviewOverlay);
+        document.body.appendChild(filePreviewPanel);
+
+        filePreviewNameEl = filePreviewPanel.querySelector("#filePreviewName");
+        filePreviewMetaEl = filePreviewPanel.querySelector("#filePreviewMeta");
+        filePreviewCodeEl = filePreviewPanel.querySelector("#filePreviewCode");
+        filePreviewCopyBtn = filePreviewPanel.querySelector("#filePreviewCopyBtn");
+        filePreviewDownloadBtn = filePreviewPanel.querySelector("#filePreviewDownloadBtn");
+        filePreviewCloseBtn = filePreviewPanel.querySelector("#filePreviewCloseBtn");
+
+        filePreviewOverlay.addEventListener("click", closeFilePreview);
+        filePreviewCloseBtn.addEventListener("click", closeFilePreview);
+
+        filePreviewDownloadBtn.addEventListener("click", function () {
+            if (!currentPreviewText) return;
+            downloadTextFile(currentPreviewFilename, currentPreviewText);
+        });
+
+        filePreviewCopyBtn.addEventListener("click", async function () {
+            if (!currentPreviewText) return;
+
+            function showCopied() {
+                filePreviewCopyBtn.innerHTML = CHECK_ICON_SVG;
+                filePreviewCopyBtn.classList.add("copied");
+                setTimeout(function () {
+                    filePreviewCopyBtn.innerHTML = COPY_ICON_SVG;
+                    filePreviewCopyBtn.classList.remove("copied");
+                }, 2000);
+            }
+
+            try {
+                await navigator.clipboard.writeText(currentPreviewText);
+                showCopied();
+            } catch (error) {
+                const temporaryTextarea = document.createElement("textarea");
+                temporaryTextarea.value = currentPreviewText;
+                temporaryTextarea.style.position = "fixed";
+                temporaryTextarea.style.opacity = "0";
+                document.body.appendChild(temporaryTextarea);
+                temporaryTextarea.select();
+                document.execCommand("copy");
+                temporaryTextarea.remove();
+                showCopied();
+            }
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && filePreviewPanel.classList.contains("open")) {
+                closeFilePreview();
+            }
+        });
+    }
+
+    function openFilePreview(filename, lang, text) {
+        buildFilePreviewPanel();
+        currentPreviewText = text;
+        currentPreviewFilename = filename;
+
+        filePreviewNameEl.textContent = filename;
+        filePreviewMetaEl.textContent = `${getLanguageLabel(lang)} · ${countLines(text)} خط`;
+        filePreviewCodeEl.textContent = text;
+
+        filePreviewOverlay.classList.add("open");
+        filePreviewPanel.classList.add("open");
+        document.body.classList.add("file-preview-open");
+    }
+
+    function closeFilePreview() {
+        if (!filePreviewPanel) return;
+        filePreviewOverlay.classList.remove("open");
+        filePreviewPanel.classList.remove("open");
+        document.body.classList.remove("file-preview-open");
+    }
+
+    // شمارنده‌ی سراسری برای اسم‌گذاری فایل‌های تولید شده در همین صفحه
+    let fileCardCounter = 0;
+
+    function buildFileCard(lang, codeText, filenameOverride) {
+        let filename = filenameOverride;
+        if (!filename) {
+            fileCardCounter += 1;
+            const extension = getLanguageExtension(lang);
+            filename = `code-${fileCardCounter}.${extension}`;
+        }
+        const lineCount = countLines(codeText);
+
+        const card = document.createElement("div");
+        card.className = "code-file-card";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("aria-label", `نمایش فایل ${filename}`);
+        card.innerHTML = `
+            <span class="code-file-icon">${FILE_ICON_SVG}</span>
+            <span class="code-file-info">
+                <span class="code-file-name">${filename}</span>
+                <span class="code-file-meta">${getLanguageLabel(lang)} · ${lineCount} خط · برای پیش‌نمایش کلیک کنید</span>
+            </span>
+            <button type="button" class="code-file-download" title="دانلود فایل" aria-label="دانلود فایل">${DOWNLOAD_ICON_SVG}</button>
+        `;
+
+        const downloadBtn = card.querySelector(".code-file-download");
+        downloadBtn.addEventListener("click", function (event) {
+            event.stopPropagation();
+            downloadTextFile(filename, codeText);
+        });
+
+        function openPreview() {
+            openFilePreview(filename, lang, codeText);
+        }
+
+        card.addEventListener("click", openPreview);
+        card.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openPreview();
+            }
+        });
+
+        return card;
+    }
+
     function setupCodeCopyButtons() {
         const codeBlocks = document.querySelectorAll(".message pre");
         codeBlocks.forEach(function (pre) {
-            // جلوگیری از اضافه‌شدن دوباره دکمه
+            // جلوگیری از پردازش دوباره
             if (
                 pre.parentElement &&
-                pre.parentElement.classList.contains("code-wrapper")
+                (pre.parentElement.classList.contains("code-wrapper") ||
+                    pre.dataset.fileCardProcessed === "true")
             ) {
                 return;
             }
 
             const codeEl = pre.querySelector("code");
             const lang = getCodeLanguage(codeEl, pre);
+            const codeText = codeEl ? codeEl.innerText : pre.innerText;
+            const lineCount = countLines(codeText);
+
+            // بلوک‌های کد طولانی: به‌جای نمایش کامل، یک کارت فایل نشون بده
+            if (lineCount > FILE_CARD_LINE_THRESHOLD) {
+                pre.dataset.fileCardProcessed = "true";
+                const card = buildFileCard(lang, codeText);
+                pre.parentNode.insertBefore(card, pre);
+                pre.style.display = "none"; // متن اصلی نگه داشته می‌شه ولی نمایش داده نمی‌شه
+                return;
+            }
 
             // ساخت ظرف کد
             const wrapper = document.createElement("div");
@@ -317,6 +542,98 @@ if (chatApp) {
         });
     }
 
+    // ---------- آپلود فایل (txt, py, css, js, html)، نرمال‌سازی سمت کلاینت و ارسال به سرور ----------
+    // چون سمت سرور از Ollama استفاده می‌شه، مدل فقط متن می‌بینه (نه فایل باینری)؛
+    // پس فایل رو همینجا با جاوااسکریپت می‌خونیم، تمیز و یکدست می‌کنیم و به‌صورت
+    // متن (داخل بلوک کد) به پیام کاربر اضافه می‌کنیم و در قالب یک کارت فایل هم نمایش می‌دیم.
+    const fileUploadTrigger = document.getElementById('fileUploadTrigger');
+    const fileUploadInput = document.getElementById('fileUploadInput');
+    const attachedFilesRow = document.getElementById('attachedFilesRow');
+
+    const ALLOWED_UPLOAD_EXTENSIONS = ['txt', 'py', 'css', 'js', 'html'];
+    const EXTENSION_TO_LANGUAGE = { txt: 'plaintext', py: 'python', css: 'css', js: 'javascript', html: 'html' };
+    const MAX_UPLOAD_SIZE_BYTES = 300 * 1024; // ۳۰۰ کیلوبایت، برای اینکه پرامپت مدل محلی خیلی سنگین نشه
+
+    let attachedFiles = []; // { name, content, lang }
+
+    function getFileExtension(filename) {
+        const match = /\.([a-zA-Z0-9]+)$/.exec(filename || "");
+        return match ? match[1].toLowerCase() : "";
+    }
+
+    // نرمال‌سازی متن فایل: حذف BOM، یکدست کردن خطوط جدید و پاک کردن فضای خالی اضافه‌ی انتهای فایل
+    function normalizeFileText(rawText) {
+        let text = rawText;
+        if (text.charCodeAt(0) === 0xFEFF) {
+            text = text.slice(1);
+        }
+        text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        text = text.replace(/\s+$/, "") + "\n";
+        return text;
+    }
+
+    function renderAttachedFilesRow() {
+        if (!attachedFilesRow) return;
+        attachedFilesRow.innerHTML = "";
+        attachedFilesRow.classList.toggle("has-files", attachedFiles.length > 0);
+
+        attachedFiles.forEach(function (file, index) {
+            const chip = document.createElement("div");
+            chip.className = "attached-file-chip";
+            chip.innerHTML = `
+                <span class="attached-file-chip-icon">${FILE_ICON_SVG}</span>
+                <span class="attached-file-chip-name">${escapeHtml(file.name)}</span>
+                <button type="button" class="attached-file-chip-remove" aria-label="حذف فایل">${CLOSE_ICON_SVG}</button>
+            `;
+            chip.querySelector(".attached-file-chip-remove").addEventListener("click", function () {
+                attachedFiles.splice(index, 1);
+                renderAttachedFilesRow();
+            });
+            attachedFilesRow.appendChild(chip);
+        });
+    }
+
+    if (fileUploadTrigger && fileUploadInput) {
+        fileUploadTrigger.addEventListener("click", function () {
+            fileUploadInput.click();
+            setAttachMenu(false);
+        });
+
+        fileUploadInput.addEventListener("change", async function () {
+            const files = Array.from(fileUploadInput.files || []);
+
+            for (const file of files) {
+                const ext = getFileExtension(file.name);
+
+                if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
+                    alert(`فرمت «.${ext}» پشتیبانی نمی‌شه. فقط txt, py, css, js, html مجازه.`);
+                    continue;
+                }
+                if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+                    alert(`فایل «${file.name}» خیلی حجیمه (حداکثر ۳۰۰ کیلوبایت).`);
+                    continue;
+                }
+
+                try {
+                    const rawText = await file.text();
+                    const normalized = normalizeFileText(rawText);
+                    attachedFiles.push({
+                        name: file.name,
+                        content: normalized,
+                        lang: EXTENSION_TO_LANGUAGE[ext] || "plaintext"
+                    });
+                } catch (err) {
+                    console.error("خطا در خوندن فایل:", file.name, err);
+                    alert(`خطا در خوندن فایل «${file.name}»`);
+                }
+            }
+
+            // خالی کردن input تا انتخاب دوباره‌ی همون فایل هم امکان‌پذیر باشه
+            fileUploadInput.value = "";
+            renderAttachedFilesRow();
+        });
+    }
+
     chatRows.forEach(function (row) {
         const item = row.querySelector('.chat-history-item');
         const pinButton = row.querySelector('.pin-action');
@@ -378,7 +695,7 @@ if (chatApp) {
         chatApp.appendChild(form);
     }
 
-    function addMessage(text, role) {
+    function addMessage(text, role, files) {
         const div = document.createElement('div');
         div.className = `message ${role}-message`;
         div.innerHTML = `
@@ -388,7 +705,18 @@ if (chatApp) {
         // پیام کاربر همیشه متن ساده است (خطر تزریق HTML نداره چون مستقیم از input میاد
         // و innerHTML ست نمی‌کنیم)؛ پیام دستیار ممکنه مارک‌داون داشته باشه که در محل
         // مصرف (حلقه‌ی استریم) جداگانه رندر می‌شه.
-        div.querySelector('.message-text').textContent = text;
+        const textEl = div.querySelector('.message-text');
+        textEl.textContent = text;
+
+        // اگه کاربر فایلی هم ضمیمه کرده بود، برای هر کدوم یک کارت فایل
+        // (همون کامپوننتی که برای بلوک‌های کد طولانی استفاده می‌شه) نشون بده
+        if (files && files.length) {
+            files.forEach(function (file) {
+                const card = buildFileCard(file.lang, file.content, file.name);
+                textEl.appendChild(card);
+            });
+        }
+
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
         return div;
@@ -477,9 +805,18 @@ if (chatApp) {
         e.preventDefault();
 
         const text = input.value.trim();
-        if (!text) return;
+        if (!text && attachedFiles.length === 0) return;
+
+        // متنی که واقعاً برای سرور (و از اونجا برای Ollama) ارسال می‌شه: پیام کاربر
+        // به‌علاوه‌ی محتوای نرمال‌شده‌ی فایل‌های ضمیمه، داخل بلوک کد با نام فایل.
+        // چون Ollama فقط متن می‌بینه، نه فایل باینری، محتوا باید همینجا به متن پرامپت اضافه بشه.
+        let composedText = text;
+        attachedFiles.forEach(function (file) {
+            composedText += `\n\n[فایل ضمیمه: ${file.name}]\n\`\`\`${file.lang}\n${file.content}\`\`\``;
+        });
 
         const formData = new FormData(form);
+        formData.set('text', composedText);
         if (webSearchEnabled) {
             formData.append('use_web_search', '1');
         }
@@ -487,9 +824,13 @@ if (chatApp) {
             formData.append('use_code_model', '1');
         }
 
+        const filesToShow = attachedFiles.slice();
+
         exitEmptyState();
-        addMessage(text, 'user');
+        addMessage(text || 'فایل ارسال شد', 'user', filesToShow);
         input.value = '';
+        attachedFiles = [];
+        renderAttachedFilesRow();
         loading.style.display = 'flex';
         if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
         sendButton.disabled = true;

@@ -341,6 +341,325 @@
     border-color: #2e7d32;
 }
 
+/* ---------- کارت فایل، برای بلوک‌های کد طولانی (بیش از ۱۰ خط) ---------- */
+.code-file-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 420px;
+
+    margin: 12px 0;
+    padding: 12px 14px;
+
+    background: #1f1f21;
+    border: 1px solid #323234;
+    border-radius: var(--radius-sm);
+
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+
+    direction: ltr;
+    text-align: left;
+}
+
+.code-file-card:hover {
+    background: #262628;
+    border-color: #46464a;
+}
+
+.code-file-card:active {
+    transform: scale(0.995);
+}
+
+.code-file-card:focus-visible {
+    outline: 2px solid var(--line-strong);
+    outline-offset: 2px;
+}
+
+.code-file-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+
+    background: #2c2c2e;
+    color: #d7d7d9;
+}
+
+.code-file-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.code-file-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.code-file-name {
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #f2f2f3;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.code-file-meta {
+    font-size: 11.5px;
+    color: #9a9a9e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.code-file-download {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 32px;
+    padding: 0;
+
+    border: 1px solid #3a3a3c;
+    border-radius: 7px;
+
+    background: #232325;
+    color: #e6e6e7;
+
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.code-file-download:hover {
+    background: #2f2f31;
+}
+
+.code-file-download svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
+/* ---------- پنل پیش‌نمایش فایل، کنار صفحه ---------- */
+.file-preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 60;
+}
+
+.file-preview-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* این پنل خارج از .chat-app به body اضافه می‌شه، پس نمی‌تونه از متغیرهای
+   تعریف‌شده روی .chat-app ارث‌بری کنه؛ برای همین اینجا نسخه‌ی مستقل خودش رو داره. */
+.file-preview-panel {
+    --fp-ink: #111112;
+    --fp-ink-soft: #38383a;
+    --fp-paper: #ffffff;
+    --fp-paper-sunk: #f4f4f5;
+    --fp-line: #e2e2e4;
+    --fp-line-strong: #c9c9cc;
+    --fp-muted: #8b8b8f;
+
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+
+    width: min(560px, 92vw);
+
+    display: flex;
+    flex-direction: column;
+
+    background: var(--fp-paper);
+    border-left: 1px solid var(--fp-line);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+
+    z-index: 61;
+}
+
+[data-theme="dark"] .file-preview-panel {
+    --fp-ink: #f0f0f1;
+    --fp-ink-soft: #c9c9cc;
+    --fp-paper: #1c1c1e;
+    --fp-paper-sunk: #151516;
+    --fp-line: #2c2c2e;
+    --fp-line-strong: #3d3d40;
+    --fp-muted: #9a9a9e;
+}
+
+.file-preview-panel.open {
+    transform: translateX(0);
+}
+
+.file-preview-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--fp-line);
+
+    direction: ltr;
+    text-align: left;
+}
+
+.file-preview-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.file-preview-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--fp-paper-sunk);
+    color: var(--fp-ink-soft);
+}
+
+.file-preview-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.file-preview-titles {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.file-preview-name {
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--fp-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-preview-meta {
+    font-size: 11.5px;
+    color: var(--fp-muted);
+}
+
+.file-preview-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.file-preview-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 30px;
+    height: 30px;
+    padding: 0;
+
+    border: 1px solid var(--fp-line-strong);
+    border-radius: 6px;
+
+    background: transparent;
+    color: var(--fp-ink-soft);
+
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.file-preview-btn svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
+.file-preview-btn:hover {
+    background: var(--fp-paper-sunk);
+    color: var(--fp-ink);
+}
+
+.file-preview-btn.copied {
+    background: #2e7d32;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
+.file-preview-body {
+    flex: 1;
+    margin: 0;
+    padding: 18px 16px;
+
+    overflow: auto;
+
+    background: #19191b;
+    color: #f2f2f3;
+
+    direction: ltr !important;
+    text-align: left !important;
+
+    font-family: Consolas, Monaco, "Courier New", monospace !important;
+    font-size: 13.5px;
+    line-height: 1.7;
+
+    white-space: pre !important;
+    word-break: normal !important;
+}
+
+.file-preview-body code {
+    background: transparent !important;
+    color: inherit !important;
+    font-family: inherit !important;
+    padding: 0;
+}
+
+body.file-preview-open {
+    overflow: hidden;
+}
+
+@media (max-width: 640px) {
+    .file-preview-panel {
+        width: 100vw;
+    }
+
+    .code-file-card {
+        max-width: 100%;
+    }
+}
+
 /* برچسب زبان برنامه‌نویسی، گوشه‌ی چپ بالای بلوک کد */
 .code-lang-label {
     position: absolute;
@@ -413,6 +732,85 @@
     align-items: center;
     gap: 8px;
     padding: 0 4px;
+}
+
+/* ردیف فایل‌های ضمیمه‌شده (هنوز ارسال‌نشده)، بالای کادر متن */
+.attached-files-row {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 4px;
+}
+
+.attached-files-row.has-files {
+    display: flex;
+}
+
+.attached-file-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    max-width: 220px;
+    padding: 6px 8px 6px 6px;
+
+    background: var(--paper-sunk);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+
+    direction: ltr;
+}
+
+.attached-file-chip-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--ink-soft);
+}
+
+.attached-file-chip-icon svg {
+    width: 13px;
+    height: 13px;
+}
+
+.attached-file-chip-name {
+    font-size: 12.5px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attached-file-chip-remove {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+    color: var(--muted);
+
+    cursor: pointer;
+}
+
+.attached-file-chip-remove svg {
+    width: 11px;
+    height: 11px;
+}
+
+.attached-file-chip-remove:hover {
+    background: var(--line);
+    color: var(--ink);
 }
 
 .input-glow::before {

@@ -38,6 +38,7 @@
                 {% endif %}
                 {% csrf_token %}
                 <div class="input-column">
+                    <div class="attached-files-row" id="attachedFilesRow"></div>
                     <div class="input-glow">
                         {% load static %}
 
@@ -48,7 +49,7 @@
                         </div>
 
                         <textarea name="text" id="chatInput" class="chat-input" placeholder="Ask anything you want"
-                            aria-label="Message" autocomplete="off" required rows="1"></textarea>
+                            aria-label="Message" autocomplete="off" rows="1"></textarea>
                     </div>
 
                     <!-- نشونگر «جستجوی وب فعاله» و «حالت کدنویسی فعاله» -->
@@ -93,6 +94,15 @@
                         </button>
                         <div class="attach-dropdown" id="attachDropdown" role="menu" aria-label="Chat tools">
                             <div class="attach-dropdown-title">Tools</div>
+                            <button type="button" class="attach-dropdown-item" id="fileUploadTrigger" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.19 9.19a1.5 1.5 0 0 1-2.12-2.12l8.48-8.48"></path>
+                                </svg>
+                                <span>Upload a file<small>txt, py, css, js, html</small></span>
+                            </button>
+                            <input type="file" id="fileUploadInput" accept=".txt,.py,.css,.js,.html" multiple
+                                style="display: none;">
                             <button type="button" class="attach-dropdown-item" id="webImageSearch" role="menuitem">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
                                     stroke-linecap="round" stroke-linejoin="round">
@@ -114,6 +124,7 @@
                         </div>
                     </div>
                 </div>
+
                 <button type="submit" id="sendButton" class="send-button" aria-label="Send">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                         stroke-linejoin="round">
