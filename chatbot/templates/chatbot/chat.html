@@ -145,7 +145,7 @@
 
         <div class="chat-history" id="chatHistory"
             data-chat-page-template="{% url 'chat_page' '00000000-0000-0000-0000-000000000000' %}"
-            data-pin-template="{% url 'pin_chat' '00000000-0000-0000-0000-000000000000' %}"
+            data-pin-template="{% url 'pin' '00000000-0000-0000-0000-000000000000' %}"
             data-delete-template="{% url 'delete-chat' '00000000-0000-0000-0000-000000000000' %}">
             <span class="chat-history-label">Recent chats</span>
             {% for item in chats %}
@@ -154,7 +154,7 @@
             <div class="chat-history-row" data-chat-id="{{ item.id }}">
                 <button type="button" class="chat-history-item active"><a href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
                 <div class="chat-history-actions" aria-label="Chat operations">
-                    <a href="{% url 'unpin_chat' item.id %}?next={{ request.get_full_path|urlencode }}">
+                    <a href="{% url 'pin' item.id %}?next={{ request.get_full_path|urlencode }}">
                         <button type="button" class="chat-action pin-action" title="Unpin" aria-label="Unpin">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
@@ -183,7 +183,7 @@
             <div class="chat-history-row" data-chat-id="{{ item.id }}">
                 <button type="button" class="chat-history-item active"><a href="{% url 'chat_page' item.id %}">{{ item.name }}</a></button>
                 <div class="chat-history-actions" aria-label="Chat operations">
-                    <a href="{% url 'pin_chat' item.id %}?next={{ request.get_full_path|urlencode }}">
+                    <a href="{% url 'pin' item.id %}?next={{ request.get_full_path|urlencode }}">
                         <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">

@@ -10,23 +10,31 @@ from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, str
 
 web_search = WebSearch()
 
-@login_required(login_url='login')
-def now_chat(request):
-    profile = request.user.profile
 
-    return render(request, "chatbot/chat.html", {
-        "messages": [],
-        "chat": None,
-        "chats": Chat.objects.filter(user=profile),
-        "first_message": None,
-    })
+SEARCH_MODEL = "qwen3:8b"
+CODE_MODEL = "qwen2.5-coder:7b"
+DEFAULT_MODEL = "qwen3:8b"
 
+SEARCH_PROMPT = (
+    "متن من را برای جستجو داخل یک موتور جستجو آماده کن. "
+    "فقط عبارت مناسب جستجو را برگردان.\nمتن: {text}"
+)
 
+SEARCH_CONTEXT_HEADER = (
+    "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
+)
 
 @login_required(login_url='login')
 def chat_page(request, pk=None):
     profile = request.user.profile
-
+    if pk is None:
+        return render(request, "chatbot/chat.html", {
+            "messages": [],
+            "chat": None,
+            "chats": Chat.objects.filter(user=profile),
+            "first_message": None,
+            })
+    
     chats = Chat.objects.filter(
         user=profile
     )
@@ -68,7 +76,7 @@ def delete_chat(request, pk):
 
 
 @login_required(login_url='login')
-def pin_chat(request, pk):
+def pin(request, pk):
     profile = request.user.profile
 
     chat = get_object_or_404(
@@ -77,24 +85,11 @@ def pin_chat(request, pk):
         user=profile
     )
 
-    chat.pin = True
-    chat.save(update_fields=["pin"])
+    if chat.pin:
+        chat.pin = False
+    else:
+        chat.pin = True
 
-    return redirect("now_chat")
-
-
-
-@login_required(login_url='login')
-def unpin_chat(request, pk):
-    profile = request.user.profile
-
-    chat = get_object_or_404(
-        Chat,
-        pk=pk,
-        user=profile
-    )
-
-    chat.pin = False
     chat.save(update_fields=["pin"])
 
     return redirect("now_chat")
@@ -103,76 +98,91 @@ def unpin_chat(request, pk):
 class ChatView(View):
     def post(self, request, pk=None):
         form = MessagesForms(request.POST)
-
         if not form.is_valid():
             return HttpResponseServerError(
                 "There is a problem with the message. Try again in a few minutes or contact support."
             )
 
         text = form.cleaned_data["text"].strip()
+        if not text:
+            return HttpResponseServerError("پیام نمی‌تواند خالی باشد.")
 
         use_web_search = request.POST.get("use_web_search") == "1"
         use_code_model = request.POST.get("use_code_model") == "1"
         profile = request.user.profile
 
-        if pk is None:
-            chat = Chat.objects.create(user=profile, name=text[:20])
-        else:
-            chat = get_object_or_404(Chat, id=pk, user=profile)
-
+        chat = self._get_or_create_chat(profile, pk, text)
         Messages.objects.create(chat=chat, role="user", text=text)
 
         response = StreamingHttpResponse(
             self._generate_response(chat, text, use_web_search, use_code_model),
             content_type="text/plain; charset=utf-8",
         )
-
         response["X-Chat-Id"] = str(chat.id)
         response["Access-Control-Expose-Headers"] = "X-Chat-Id"
         return response
+    
+    @staticmethod
+    def _get_or_create_chat(profile, pk, text):
+        if pk is None:
+            return Chat.objects.create(user=profile, name=text[:20])
+        return get_object_or_404(Chat, id=pk, user=profile)
+
+    @staticmethod
+    def render_model(use_code_model):
+        return CODE_MODEL if use_code_model else DEFAULT_MODEL
+
+    @staticmethod
+    def extract_search_text(text):
+        """از مدل می‌خواهد متن کاربر را به کوئری جستجو تبدیل کند."""
+        search_messages = [
+            {"role": "user", "content": SEARCH_PROMPT.format(text=text)}
+        ]
+
+        full_text = ""
+        for chunk in stream_chat_completion(
+            SEARCH_MODEL,
+            search_messages,
+            [],
+            get_optimal_compute_config(),
+        ):
+            full_text += chunk
+        return full_text
+
+    @staticmethod
+    def search(query):
+        """اجرای جستجوی وب با کوئری آماده‌شده."""
+        return asyncio.run(web_search.handle_user_query(query))
+
+    @staticmethod
+    def build_search_context(results):
+        """ساخت یک پیام system شامل نتایج جستجو."""
+        if not results:
+            return None
+
+        search_context = SEARCH_CONTEXT_HEADER
+        for r in results:
+            search_context += (
+                f"- {r['title']}\n  {r['body']}\n  منبع: {r['href']}\n\n"
+            )
+        return {"role": "system", "content": search_context}
 
     def _generate_response(self, chat, text, use_web_search, use_code_model):
-        full_text = ""
-
-        if use_code_model:
-            model_name = "qwen2.5-coder:7b"
-        else:
-            model_name = "qwen3:8b"
+        full_text = ""  
+        model_name = self.render_model(use_code_model)
 
         messages_for_model = HistoryCompressor.compress(chat.id)
 
         if use_web_search:
-            search_messages = [
-                {
-                    "role": "user",
-                    "content": (
-                        "متن من را برای جستجو داخل یک موتور جستجو آماده کن. "
-                        f"فقط عبارت مناسب جستجو را برگردان.\nمتن: {text}"
-                    ),
-                }
-            ]
-            full_text = ""
-            for chunk in stream_chat_completion(
-                "qwen3:8b",
-                search_messages,
-                [],
-                get_optimal_compute_config(),
-            ):
-                full_text += chunk
+            search_query = self.extract_search_text(text)
 
-            results = asyncio.run(web_search.handle_user_query(full_text))
-            if results:
-                search_context = (
-                    "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
-                )
-                for r in results:
-                    search_context += (
-                        f"- {r['title']}\n  {r['body']}\n  منبع: {r['href']}\n\n"
-                    )
+            results = self.search(search_query)
 
+            search_message = self.build_search_context(results)
+            if search_message:
                 messages_for_model.insert(
                     len(messages_for_model) - 1,
-                    {"role": "system", "content": search_context},
+                    search_message,
                 )
 
         for chunk in stream_chat_completion(
@@ -183,11 +193,12 @@ class ChatView(View):
         ):
             full_text += chunk
             yield chunk
+
         Messages.objects.create(chat=chat, role="assistant", text=full_text)
 
 
 
-@login_required(login_url='login')
+@login_required(login_url='')
 def show_setting(request):
     return render(request, "chatbot/setting.html")
 
