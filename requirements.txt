@@ -8,3 +8,5 @@ ddgs==9.16.0
 lxml_html_clean==0.4.5
 trafilatura==2.2.0
 djangorestframework==3.18.1
+modelscope==1.40.0
+tokenizers==0.23.2

@@ -1,12 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import StreamingHttpResponse, HttpResponseServerError
+from django.http import StreamingHttpResponse, HttpResponseServerError, JsonResponse
 from django.contrib.auth.decorators import login_required
 import asyncio
 from django.utils.decorators import method_decorator
 from django.views import View
-from .models import Messages, Chat
+from .models import Messages, Chat, Tokenizer
 from .forms import MessagesForms, ProfileForms
-from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion
+from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion, count_tokens, decrease_tokens
 
 web_search = WebSearch()
 
@@ -104,6 +104,7 @@ class ChatView(View):
             )
 
         text = form.cleaned_data["text"].strip()
+
         if not text:
             return HttpResponseServerError("پیام نمی‌تواند خالی باشد.")
 
@@ -111,13 +112,24 @@ class ChatView(View):
         use_code_model = request.POST.get("use_code_model") == "1"
         profile = request.user.profile
 
+        if not decrease_tokens(profile, count_tokens(text=text)):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "INSUFFICIENT_TOKENS",
+                    "message": "موجودی توکن شما کافی نیست.",
+                    },
+                    status=402
+                    )
+
         chat = self._get_or_create_chat(profile, pk, text)
         Messages.objects.create(chat=chat, role="user", text=text)
 
         response = StreamingHttpResponse(
-            self._generate_response(chat, text, use_web_search, use_code_model),
+            self._generate_response(chat, text, use_web_search, use_code_model, profile),
             content_type="text/plain; charset=utf-8",
         )
+
         response["X-Chat-Id"] = str(chat.id)
         response["Access-Control-Expose-Headers"] = "X-Chat-Id"
         return response
@@ -167,7 +179,7 @@ class ChatView(View):
             )
         return {"role": "system", "content": search_context}
 
-    def _generate_response(self, chat, text, use_web_search, use_code_model):
+    def _generate_response(self, chat, text, use_web_search, use_code_model, profile):
         full_text = ""  
         model_name = self.render_model(use_code_model)
 
@@ -193,14 +205,32 @@ class ChatView(View):
         ):
             full_text += chunk
             yield chunk
-
+        
+        decrease_tokens(profile, count_tokens(text=full_text))
         Messages.objects.create(chat=chat, role="assistant", text=full_text)
 
 
 
-@login_required(login_url='')
+@login_required(login_url='login')
 def show_setting(request):
-    return render(request, "chatbot/setting.html")
+    profile = request.user.profile
+    token = Tokenizer.objects.get(user=profile)
+    
+    remaining = token.tokenizer or 0
+    total = 32768
+    
+    if total > 0:
+        token_percent = round((remaining / total) * 100)
+    else:
+        token_percent = 0
+    token_percent = max(0, min(100, token_percent))
+    
+    return render(request, "chatbot/setting.html", {
+        'token': remaining,           
+        'tokenend': total,
+        'token_percent': token_percent,
+        'account': profile,           
+    })
 
 @login_required(login_url='login')
 def edit_username(request):

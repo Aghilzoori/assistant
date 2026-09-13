@@ -4,8 +4,18 @@ import asyncio
 import requests
 import trafilatura
 from ddgs import DDGS
-from .models import Messages
+from django.db import transaction
+from .models import Messages, Tokenizer
+from tokenizers import Tokenizer as tok
+from modelscope import snapshot_download
 from .exceptions import SearchRequestError
+
+_model_path = snapshot_download(
+    "Qwen/Qwen3-8B",
+    allow_patterns=["tokenizer.json", "tokenizer_config.json"]
+)
+
+tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
 
 DEFAULT_MODEL = "qwen3:8b"
 RECENT_MESSAGES_COUNT = 6
@@ -120,3 +130,21 @@ class WebSearch:
                     "body": content,
                 })
         return output
+
+@transaction.atomic
+def decrease_tokens(profile_id, token_count):
+    token_obj, created = Tokenizer.objects.select_for_update().get_or_create(
+        user_id=profile_id,
+        defaults={"tokenizer": 32768}
+    )
+
+    if token_obj.tokenizer < token_count:
+        return False
+
+    token_obj.tokenizer -= token_count
+    token_obj.save(update_fields=["tokenizer"])
+
+    return True
+
+def count_tokens(text: str) -> int:
+    return len(tokenizer.encode(text).ids)

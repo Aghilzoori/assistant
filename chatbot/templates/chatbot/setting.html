@@ -71,6 +71,45 @@
             </form>
         </section>
 
+        <!-- ---------- Token / Usage Card ---------- -->
+        {% with total=tokenend remaining=token %}
+            {% if total %}
+                {% widthratio remaining total 100 as token_percent %}
+            {% else %}
+                {% widthratio 0 1 100 as token_percent %}
+            {% endif %}
+
+            <section class="settings-card">
+                <div class="settings-card-head">
+                    <h2>Token Balance</h2>
+                    <p>Your remaining tokens and hourly refill rate</p>
+                </div>
+
+                <div class="settings-token-row">
+                    <div class="settings-token-bar" role="progressbar"
+                         aria-valuenow="{{ remaining|default:0 }}"
+                         aria-valuemin="0"
+                         aria-valuemax="{{ total|default:0 }}"
+                         aria-label="Remaining tokens">
+                        <div class="settings-token-fill" data-percent="{{ token_percent|default:0 }}"></div>
+                    </div>
+                    <div class="settings-token-meta">
+                        <span class="settings-token-percent">{{ token_percent|default:0 }}%</span>
+                        <span class="settings-token-count">{{ remaining|default:0 }} / {{ total|default:0 }}</span>
+                    </div>
+                </div>
+
+                <p class="settings-token-hint">
+                    {% if account.is_pro %}
+                        You gain <strong>876 tokens</strong> every hour.
+                    {% else %}
+                        You gain <strong>321 tokens</strong> every hour.
+                        Pro users gain <strong>876 tokens</strong> per hour.
+                    {% endif %}
+                </p>
+            </section>
+        {% endwith %}
+
         <!-- ---------- Password Change Card ---------- -->
         <section class="settings-card">
             <div class="settings-card-head">
@@ -112,5 +151,97 @@
 
     </div>
 </div>
+
+<style>
+    /* ---------- Token Card ---------- */
+    .settings-token-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .settings-token-bar {
+        flex: 1;
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(127, 127, 127, 0.18);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .settings-token-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #6a5cff, #9b8cff);
+        transition: width 0.9s ease;
+    }
+
+    .settings-token-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        min-width: 110px;
+    }
+
+    .settings-token-percent {
+        font-weight: 700;
+        font-size: 18px;
+        line-height: 1.1;
+    }
+
+    .settings-token-count {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+
+    .settings-token-hint {
+        margin-top: 14px;
+        font-size: 13px;
+        opacity: 0.75;
+        line-height: 1.6;
+    }
+
+    .settings-token-hint strong {
+        opacity: 1;
+    }
+
+    /* حالت کم‌توکن */
+    .settings-token-fill.is-low {
+        background: linear-gradient(90deg, #ff5c5c, #ff8f6b);
+    }
+
+    /* Pro */
+    .settings-token-fill.is-pro {
+        background: linear-gradient(90deg, #ffb020, #ffd66b);
+    }
+</style>
+
+<script>
+    (function () {
+        function paintTokenBars() {
+            document.querySelectorAll('.settings-token-fill').forEach(function (el) {
+                var percent = parseFloat(el.dataset.percent || '0');
+                if (isNaN(percent)) percent = 0;
+                percent = Math.max(0, Math.min(100, percent));
+
+                el.style.width = percent + '%';
+
+                if (percent <= 15) {
+                    el.classList.add('is-low');
+                }
+                {% if account.is_pro %}
+                el.classList.add('is-pro');
+                {% endif %}
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', paintTokenBars);
+        } else {
+            paintTokenBars();
+        }
+    })();
+</script>
 
 {% endblock blockname %}
