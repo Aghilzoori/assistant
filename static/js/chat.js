@@ -122,7 +122,8 @@ if (chatApp) {
         yaml: "YAML", yml: "YAML",
         dockerfile: "Dockerfile",
         markdown: "Markdown", md: "Markdown",
-        plaintext: "متن", text: "متن", txt: "متن"
+        plaintext: "متن", text: "متن", txt: "متن",
+        docx: "Word", xlsx: "Excel", pptx: "PowerPoint", pdf: "PDF"
     };
 
     // تشخیص زبان از روی کلاس‌های استاندارد markdown مثل language-python / lang-python
@@ -166,7 +167,8 @@ if (chatApp) {
         yaml: "yaml", yml: "yaml",
         dockerfile: "Dockerfile",
         markdown: "md", md: "md",
-        plaintext: "txt", text: "txt", txt: "txt"
+        plaintext: "txt", text: "txt", txt: "txt",
+        docx: "docx", xlsx: "xlsx", pptx: "pptx", pdf: "pdf"
     };
 
     function getLanguageExtension(lang) {
@@ -544,15 +546,31 @@ if (chatApp) {
 
     // ---------- آپلود فایل (txt, py, css, js, html)، نرمال‌سازی سمت کلاینت و ارسال به سرور ----------
     // چون سمت سرور از Ollama استفاده می‌شه، مدل فقط متن می‌بینه (نه فایل باینری)؛
-    // پس فایل رو همینجا با جاوااسکریپت می‌خونیم، تمیز و یکدست می‌کنیم و به‌صورت
-    // متن (داخل بلوک کد) به پیام کاربر اضافه می‌کنیم و در قالب یک کارت فایل هم نمایش می‌دیم.
+    // پس فایل رو همینجا با جاوااسکریپت می‌خونیم (برای فایل‌های آفیس، محتواشو به متن
+    // خام تبدیل می‌کنیم)، تمیز و یکدست می‌کنیم و به‌صورت متن (داخل بلوک کد) به پیام
+    // کاربر اضافه می‌کنیم و در قالب یک کارت فایل هم نمایش می‌دیم.
     const fileUploadTrigger = document.getElementById('fileUploadTrigger');
     const fileUploadInput = document.getElementById('fileUploadInput');
     const attachedFilesRow = document.getElementById('attachedFilesRow');
 
-    const ALLOWED_UPLOAD_EXTENSIONS = ['txt', 'py', 'css', 'js', 'html'];
-    const EXTENSION_TO_LANGUAGE = { txt: 'plaintext', py: 'python', css: 'css', js: 'javascript', html: 'html' };
-    const MAX_UPLOAD_SIZE_BYTES = 300 * 1024; // ۳۰۰ کیلوبایت، برای اینکه پرامپت مدل محلی خیلی سنگین نشه
+    // فرمت‌های متنی ساده: مستقیم با file.text() خونده می‌شن
+    const PLAIN_TEXT_EXTENSIONS = ['txt', 'py', 'css', 'js', 'html'];
+    // فرمت‌های مدرن آفیس (Open XML) + PDF: با کتابخونه‌های سمت کلاینت به متن تبدیل می‌شن
+    const OFFICE_EXTENSIONS = ['docx', 'xlsx', 'pptx', 'pdf'];
+    // فرمت‌های قدیمی و باینری آفیس: هیچ کتابخونه‌ی مطمئن سمت مرورگر برای این‌ها وجود نداره
+    const LEGACY_OFFICE_EXTENSIONS = ['doc', 'xls', 'ppt'];
+
+    const ALLOWED_UPLOAD_EXTENSIONS = PLAIN_TEXT_EXTENSIONS.concat(OFFICE_EXTENSIONS);
+
+    const EXTENSION_TO_LANGUAGE = {
+        txt: 'plaintext', py: 'python', css: 'css', js: 'javascript', html: 'html',
+        docx: 'docx', xlsx: 'xlsx', pptx: 'pptx', pdf: 'pdf'
+    };
+
+    // طبق درخواست، هیچ محدودیتی روی حجم فایل یا طول متن استخراج‌شده اعمال نمی‌شه.
+    // توجه: این یعنی فایل‌های خیلی بزرگ ممکنه مرورگر رو کند کنن، و پرامپت خیلی
+    // بزرگ ممکنه از ظرفیت context مدل Ollama رد بزنه (که در اون صورت خودِ Ollama
+    // یا خطا می‌ده یا ابتدای پرامپت رو نادیده می‌گیره، نه اینکه اینجا کنترل بشه).
 
     let attachedFiles = []; // { name, content, lang }
 
@@ -568,8 +586,141 @@ if (chatApp) {
             text = text.slice(1);
         }
         text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        // بیش از دو خط خالی پشت‌سرهم (معمولاً محصول تبدیل فایل‌های آفیس/PDF) رو جمع کن
+        text = text.replace(/\n{3,}/g, "\n\n");
         text = text.replace(/\s+$/, "") + "\n";
         return text;
+    }
+
+    function decodeXmlEntities(str) {
+        return str
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .replace(/&amp;/g, "&");
+    }
+
+    // ---------- بارگذاری تنبل کتابخونه‌های تبدیل فایل‌های آفیس (فقط وقتی لازم بشه) ----------
+    const OFFICE_LIB_URLS = {
+        mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js", // docx
+        jszip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js",                // pptx
+        xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",               // xlsx
+        pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",                  // pdf
+        pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"      // pdf (وب‌ورکر)
+    };
+
+    function loadScriptOnce(src) {
+        return new Promise(function (resolve, reject) {
+            const existing = document.querySelector(`script[src="${src}"]`);
+            if (existing) {
+                if (existing.dataset.loaded === "true") {
+                    resolve();
+                } else {
+                    existing.addEventListener("load", function () { resolve(); });
+                    existing.addEventListener("error", function () { reject(new Error("خطا در لود " + src)); });
+                }
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = function () {
+                script.dataset.loaded = "true";
+                resolve();
+            };
+            script.onerror = function () { reject(new Error("خطا در لود " + src)); };
+            document.head.appendChild(script);
+        });
+    }
+
+    let officeLibsPromise = null;
+    function ensureOfficeLibsLoaded() {
+        if (!officeLibsPromise) {
+            officeLibsPromise = Promise.all([
+                loadScriptOnce(OFFICE_LIB_URLS.mammoth),
+                loadScriptOnce(OFFICE_LIB_URLS.jszip),
+                loadScriptOnce(OFFICE_LIB_URLS.xlsx),
+                loadScriptOnce(OFFICE_LIB_URLS.pdf)
+            ]).then(function () {
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = OFFICE_LIB_URLS.pdfWorker;
+                }
+            });
+        }
+        return officeLibsPromise;
+    }
+
+    // ---------- استخراج متن از هر فرمت آفیس ----------
+    async function extractDocxText(arrayBuffer) {
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
+        return result.value;
+    }
+
+    async function extractXlsxText(arrayBuffer) {
+        const workbook = window.XLSX.read(arrayBuffer, { type: "array" });
+        const parts = workbook.SheetNames.map(function (sheetName) {
+            const sheet = workbook.Sheets[sheetName];
+            const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+            return `--- شیت: ${sheetName} ---\n${csv}`;
+        });
+        return parts.join("\n\n");
+    }
+
+    async function extractPptxText(arrayBuffer) {
+        const zip = await window.JSZip.loadAsync(arrayBuffer);
+        const slideFiles = Object.keys(zip.files)
+            .filter(function (name) { return /^ppt\/slides\/slide\d+\.xml$/.test(name); })
+            .sort(function (a, b) {
+                const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
+                const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
+                return numA - numB;
+            });
+
+        const slideTexts = [];
+        for (const name of slideFiles) {
+            const xml = await zip.files[name].async("string");
+            const runs = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+            const text = runs
+                .map(function (run) { return decodeXmlEntities(run.replace(/<\/?a:t>/g, "")); })
+                .join(" ")
+                .trim();
+            slideTexts.push(text);
+        }
+
+        return slideTexts
+            .map(function (text, i) { return `--- اسلاید ${i + 1} ---\n${text}`; })
+            .join("\n\n");
+    }
+
+    async function extractPdfText(arrayBuffer) {
+        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pageTexts = [];
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            const text = content.items.map(function (item) { return item.str; }).join(" ");
+            pageTexts.push(`--- صفحه ${pageNum} ---\n${text}`);
+        }
+
+        return pageTexts.join("\n\n");
+    }
+
+    async function extractRawTextFromFile(file, ext) {
+        if (PLAIN_TEXT_EXTENSIONS.includes(ext)) {
+            return file.text();
+        }
+
+        await ensureOfficeLibsLoaded();
+        const buffer = await file.arrayBuffer();
+
+        if (ext === "docx") return extractDocxText(buffer);
+        if (ext === "xlsx") return extractXlsxText(buffer);
+        if (ext === "pptx") return extractPptxText(buffer);
+        if (ext === "pdf") return extractPdfText(buffer);
+
+        throw new Error("فرمت پشتیبانی‌نشده: " + ext);
     }
 
     function renderAttachedFilesRow() {
@@ -605,17 +756,21 @@ if (chatApp) {
             for (const file of files) {
                 const ext = getFileExtension(file.name);
 
-                if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
-                    alert(`فرمت «.${ext}» پشتیبانی نمی‌شه. فقط txt, py, css, js, html مجازه.`);
+                if (LEGACY_OFFICE_EXTENSIONS.includes(ext)) {
+                    alert(
+                        `فرمت قدیمی «.${ext}» پشتیبانی نمی‌شه چون قابل‌خوندن با جاوااسکریپت مرورگر نیست.\n` +
+                        `لطفاً فایل رو تو Word/Excel/PowerPoint باز کن و با «Save As» به فرمت جدید (.${ext}x) ذخیره کن.`
+                    );
                     continue;
                 }
-                if (file.size > MAX_UPLOAD_SIZE_BYTES) {
-                    alert(`فایل «${file.name}» خیلی حجیمه (حداکثر ۳۰۰ کیلوبایت).`);
+
+                if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
+                    alert(`فرمت «.${ext}» پشتیبانی نمی‌شه. فقط txt, py, css, js, html, docx, xlsx, pptx, pdf مجازه.`);
                     continue;
                 }
 
                 try {
-                    const rawText = await file.text();
+                    const rawText = await extractRawTextFromFile(file, ext);
                     const normalized = normalizeFileText(rawText);
                     attachedFiles.push({
                         name: file.name,
@@ -624,7 +779,7 @@ if (chatApp) {
                     });
                 } catch (err) {
                     console.error("خطا در خوندن فایل:", file.name, err);
-                    alert(`خطا در خوندن فایل «${file.name}»`);
+                    alert(`خطا در خوندن فایل «${file.name}». مطمئن شو فایل سالمه و خراب نیست.`);
                 }
             }
 
