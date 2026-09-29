@@ -7,6 +7,9 @@ from django.views import View
 from .models import Messages, Chat, Tokenizer
 from .forms import MessagesForms, ProfileForms
 from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion, count_tokens, decrease_tokens
+from home.models import Profile
+from django.utils import timezone
+from datetime import timedelta
 
 web_search = WebSearch()
 
@@ -246,3 +249,20 @@ def edit_username(request):
 
     context = {'form': form}
     return render(request, 'chatbot/setting.html', context)
+
+def rander_page_plan(request):
+    return render(request, "chatbot/plan.html")
+
+@login_required(login_url='login')
+def make_user_pro(request):
+    if request.method == "POST":
+        profile = request.user.profile
+
+        profile.plan = Profile.Plan.PRO
+
+        profile.pro_expires_at = timezone.now() + timedelta(days=30)
+
+        profile.save()
+
+        return redirect("rander-page-plan")
+    return redirect("rander-page-plan")
