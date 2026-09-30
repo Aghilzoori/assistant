@@ -1,12 +1,37 @@
 from django.core.management.base import BaseCommand
 from chatbot.models import Tokenizer
 from django.db.models import F
+from django.utils import timezone
+from home.models import Profile
+
+
 
 class Command(BaseCommand):
-    help = "Add tokens to all users"
+    help = "Add tokens to users"
 
     def handle(self, *args, **options):
-        updated = Tokenizer.objects.update(tokenizer=F('tokenizer') + 321)
+
+        free_updated = Tokenizer.objects.filter(
+            user__plan=Profile.Plan.FREE
+        ).update(
+            tokenizer=F("tokenizer") + 321
+        )
+
+        pro_updated = Tokenizer.objects.filter(
+            user__plan=Profile.Plan.PRO,
+            user__pro_expires_at__gt=timezone.now()
+        ).update(
+            tokenizer=F("tokenizer") + 876
+        )
+
         self.stdout.write(
-            self.style.SUCCESS(f"321 tokens were added to {updated} users.")
+            self.style.SUCCESS(
+                f"321 tokens were added to {free_updated} Free users."
+            )
+        )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"876 tokens were added to {pro_updated} Pro users."
+            )
         )

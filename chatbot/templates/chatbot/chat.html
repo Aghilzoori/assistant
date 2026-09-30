@@ -248,7 +248,7 @@
             <span class="sidebar-account-info">
                 <span class="sidebar-account-name">{{ request.user.profile.first_name|default:"user" }}</span>
                 <span class="sidebar-account-plan{% if account.is_pro %} is-pro{% endif %}">
-                    {% if account.is_pro %}Pro Plan{% else %}Free Plan{% endif %}
+                    {% if request.user.profile.is_pro %}Pro Plan{% else %}Free Plan{% endif %}
                 </span>
             </span>
             <svg class="sidebar-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"

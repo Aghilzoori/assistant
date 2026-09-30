@@ -255,7 +255,7 @@ def rander_page_plan(request):
 
 @login_required(login_url='login')
 def make_user_pro(request):
-    if request.method == "POST":
+    if request.method == "POST" and not request.user.profile.is_pro:
         profile = request.user.profile
 
         profile.plan = Profile.Plan.PRO
