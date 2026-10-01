@@ -1,10 +1,8 @@
-from django.core.management.base import BaseCommand
-from chatbot.models import Tokenizer
 from django.db.models import F
-from django.utils import timezone
 from home.models import Profile
-
-
+from django.utils import timezone
+from chatbot.models import Tokenizer
+from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = "Add tokens to users"

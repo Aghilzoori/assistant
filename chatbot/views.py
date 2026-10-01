@@ -1,16 +1,15 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import StreamingHttpResponse, HttpResponseServerError, JsonResponse
-from django.contrib.auth.decorators import login_required
 import asyncio
-from django.utils.decorators import method_decorator
 from django.views import View
-from .models import Messages, Chat, Tokenizer
-from .forms import MessagesForms, ProfileForms
-from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion, count_tokens, decrease_tokens
+from datetime import timedelta
 from home.models import Profile
 from django.utils import timezone
-from datetime import timedelta
-
+from .models import Messages, Chat, Tokenizer
+from .forms import MessagesForms, ProfileForms
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import StreamingHttpResponse, HttpResponseServerError, JsonResponse
+from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion, count_tokens, decrease_tokens
 web_search = WebSearch()
 
 

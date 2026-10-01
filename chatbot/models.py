@@ -1,7 +1,7 @@
-from django.db import models
 import uuid
-from ckeditor.fields import RichTextField
+from django.db import models
 from home.models import Profile
+from ckeditor.fields import RichTextField
 from django.core.validators import MinValueValidator
 
 class Chat(models.Model):

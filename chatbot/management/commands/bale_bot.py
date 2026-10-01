@@ -1,9 +1,6 @@
 import time
-
-from django.core.management.base import BaseCommand
-
 from .bale_api import get_user_messages
-
+from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = "Run Bale bot"
