@@ -1,0 +1,484 @@
+/* ============================================================
+Design tokens — LIGHT (default)
+============================================================ */
+:root {
+    color-scheme: light;
+
+    --paper: #ffffff;
+    --paper-sunk: #f6f5f2;
+    --ink: #1c1c1a;
+    --ink-soft: #4c4c48;
+    --muted: #8b8b85;
+    --line: #e7e6e1;
+    --line-strong: #d2d1ca;
+
+    /* accent — text / borders */
+    --accent: #7c3aed;
+    --accent-soft: rgba(124, 58, 237, 0.12);
+    --accent-border: rgba(124, 58, 237, 0.35);
+    --accent-shadow: rgba(124, 58, 237, 0.45);
+
+    /* accent — buttons */
+    --accent-bg: #7c3aed;
+    --accent-bg-hover: #6d28d9;
+    --accent-fg: #ffffff;
+
+    /* feedback */
+    --success: #2e7d32;
+    --success-bg: rgba(46, 125, 50, 0.08);
+    --error: #c62828;
+    --error-bg: rgba(198, 40, 40, 0.08);
+}
+
+/* ============================================================
+Design tokens — DARK
+Applied when the app sets data-theme="dark" / class "dark"
+on <html> or <body>.
+============================================================ */
+[data-theme="dark"],
+.dark,
+.dark-mode,
+.theme-dark {
+    color-scheme: dark;
+
+    --paper: #1f1f1d;
+    --paper-sunk: #141413;
+    --ink: #f4f3ef;
+    --ink-soft: #b8b7b1;
+    --muted: #85847f;
+    --line: #2f2f2c;
+    --line-strong: #45443f;
+
+    --accent: #a78bfa;
+    --accent-soft: rgba(167, 139, 250, 0.16);
+    --accent-border: rgba(167, 139, 250, 0.35);
+    --accent-shadow: rgba(124, 58, 237, 0.55);
+
+    --accent-bg: #a78bfa;
+    --accent-bg-hover: #b9a3fb;
+    --accent-fg: #17161a;
+
+    --success: #4ade80;
+    --success-bg: rgba(74, 222, 128, 0.10);
+    --error: #f87171;
+    --error-bg: rgba(248, 113, 113, 0.10);
+}
+
+/* ============================================================
+Follow the OS preference when the app hasn't decided yet.
+(Delete this block if your app always sets data-theme.)
+============================================================ */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]):not([data-theme="dark"]):not(.light):not(.light-mode):not(.theme-light) {
+        color-scheme: dark;
+
+        --paper: #1f1f1d;
+        --paper-sunk: #141413;
+        --ink: #f4f3ef;
+        --ink-soft: #b8b7b1;
+        --muted: #85847f;
+        --line: #2f2f2c;
+        --line-strong: #45443f;
+
+        --accent: #a78bfa;
+        --accent-soft: rgba(167, 139, 250, 0.16);
+        --accent-border: rgba(167, 139, 250, 0.35);
+        --accent-shadow: rgba(124, 58, 237, 0.55);
+
+        --accent-bg: #a78bfa;
+        --accent-bg-hover: #b9a3fb;
+        --accent-fg: #17161a;
+
+        --success: #4ade80;
+        --success-bg: rgba(74, 222, 128, 0.10);
+        --error: #f87171;
+        --error-bg: rgba(248, 113, 113, 0.10);
+    }
+}
+
+/* ============================================================
+Base
+============================================================ */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--paper-sunk);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ============================================================
+Page shell
+============================================================ */
+.settings-page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--paper-sunk);
+    padding: 28px clamp(16px, 6vw, 10%) 60px;
+    direction: ltr;
+    text-align: left;
+    transition: background-color 0.2s ease;
+}
+
+.settings-topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.settings-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 8px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.settings-back:hover {
+    background: var(--paper-sunk);
+    border-color: var(--ink-soft);
+}
+
+.settings-back svg {
+    width: 16px;
+    height: 16px;
+}
+
+.settings-topbar h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+/* Optional demo toggle — remove if your app already has one */
+.theme-toggle {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 38px;
+    height: 38px;
+
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--paper-sunk);
+    border-color: var(--ink-soft);
+}
+
+.theme-toggle:active {
+    transform: scale(0.96);
+}
+
+.theme-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================================
+Flash messages
+============================================================ */
+.settings-messages {
+    max-width: 720px;
+    margin: 0 auto 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-flash {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.settings-flash-success {
+    border-color: var(--success);
+    color: var(--success);
+    background: var(--success-bg);
+}
+
+.settings-flash-error {
+    border-color: var(--error);
+    color: var(--error);
+    background: var(--error-bg);
+}
+
+/* ============================================================
+Body / cards
+============================================================ */
+.settings-body {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.settings-card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--paper);
+    padding: 22px clamp(16px, 4vw, 26px);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-card-head h2 {
+    margin: 0 0 4px;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.settings-card-head p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--muted);
+}
+
+.plans-head {
+    margin-bottom: 0;
+}
+
+/* ============================================================
+Plans grid
+============================================================ */
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: stretch;
+}
+
+.plan-card {
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
+}
+
+.plan-card:hover {
+    border-color: var(--line-strong);
+}
+
+.plan-card.is-pro {
+    border-color: var(--accent-border);
+    box-shadow: 0 6px 24px -14px var(--accent-shadow);
+}
+
+/* Plan head */
+.plan-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.plan-name {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.plan-tag {
+    padding: 3px 11px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--paper-sunk);
+    white-space: nowrap;
+}
+
+.plan-tag.is-pro {
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+/* Price */
+.plan-price {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin: 0 0 6px;
+}
+
+.plan-price .amount {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+}
+
+.plan-price .period {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.plan-sub {
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--muted);
+}
+
+.plan-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 0 0 16px;
+}
+
+/* Features */
+.plan-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    flex: 1;
+}
+
+.plan-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+}
+
+.plan-feature svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    color: var(--ink-soft);
+}
+
+.plan-card.is-pro .plan-feature svg {
+    color: var(--accent);
+}
+
+.plan-feature.is-muted {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--line-strong);
+}
+
+.plan-feature.is-muted svg {
+    color: var(--muted);
+}
+
+/* Action */
+.plan-action {
+    margin-top: 22px;
+    display: flex;
+}
+
+.plan-button {
+    width: 100%;
+    padding: 11px 18px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+
+    background: var(--paper);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.plan-button:hover {
+    background: var(--paper-sunk);
+    border-color: var(--ink-soft);
+}
+
+.plan-button:active {
+    transform: scale(0.98);
+}
+
+.plan-button.is-primary {
+    background: var(--accent-bg);
+    border-color: var(--accent-bg);
+    color: var(--accent-fg);
+}
+
+.plan-button.is-primary:hover {
+    background: var(--accent-bg-hover);
+    border-color: var(--accent-bg-hover);
+}
+
+.plan-button[disabled] {
+    cursor: default;
+    color: var(--muted);
+    background: var(--paper-sunk);
+    border-color: var(--line);
+    transform: none;
+}
+
+.plans-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* ============================================================
+Responsive
+============================================================ */
+@media (max-width: 640px) {
+    .plans-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .settings-topbar {
+        flex-wrap: wrap;
+    }
+
+    .plan-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

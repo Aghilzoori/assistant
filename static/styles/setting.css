@@ -296,3 +296,66 @@
         align-items: flex-start;
     }
 }
+
+/* ---------- Token Card ---------- */
+.settings-token-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.settings-token-bar {
+    flex: 1;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.18);
+    overflow: hidden;
+    position: relative;
+}
+
+.settings-token-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #6a5cff, #9b8cff);
+    transition: width 0.9s ease;
+}
+
+.settings-token-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 110px;
+}
+
+.settings-token-percent {
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.1;
+}
+
+.settings-token-count {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.settings-token-hint {
+    margin-top: 14px;
+    font-size: 13px;
+    opacity: 0.75;
+    line-height: 1.6;
+}
+
+.settings-token-hint strong {
+    opacity: 1;
+}
+
+/* حالت کم‌توکن */
+.settings-token-fill.is-low {
+    background: linear-gradient(90deg, #ff5c5c, #ff8f6b);
+}
+
+/* Pro */
+.settings-token-fill.is-pro {
+    background: linear-gradient(90deg, #ffb020, #ffd66b);
+}
