@@ -10,12 +10,15 @@ from tokenizers import Tokenizer as tok
 from modelscope import snapshot_download
 from .exceptions import SearchRequestError
 
-_model_path = snapshot_download(
-    "Qwen/Qwen3-8B",
-    allow_patterns=["tokenizer.json", "tokenizer_config.json"]
-)
+try:
+    _model_path = snapshot_download(
+        "Qwen/Qwen3-8B",
+        allow_patterns=["tokenizer.json", "tokenizer_config.json"]
+    )
 
-tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
+    tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
+except Exception:
+    pass
 
 DEFAULT_MODEL = "qwen3:8b"
 RECENT_MESSAGES_COUNT = 6
