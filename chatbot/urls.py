@@ -10,7 +10,6 @@ urlpatterns = [
     path("delete-chat/<uuid:pk>/", views.delete_chat, name="delete-chat"),
     path('chat/-<uuid:pk>-/pin', views.pin, name='pin'),
     path("setting/", views.show_setting, name="setting"),
-    path('edit-username', views.edit_username, name="edit-username"),
-    path('rander-page-plan', views.rander_page_plan, name="rander-page-plan"),
-    path('get-plan-pro', views.make_user_pro, name="get-plan-pro")
+    path('edit-username/', views.edit_username, name="edit-username"),
+    path('get-plan-pro/', views.make_user_pro, name="get-plan-pro")
 ]

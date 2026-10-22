@@ -181,3 +181,35 @@ MARKDOWNIFY = {
 #bale
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+#models
+
+SEARCH_MODEL = "qwen3:8b"
+CODE_MODEL = "qwen2.5-coder:7b"
+DEFAULT_MODEL = "qwen3:8b"
+
+#prompts
+
+SEARCH_PROMPT = (
+    "متن من را برای جستجو داخل یک موتور جستجو آماده کن. "
+    "فقط عبارت مناسب جستجو را برگردان.\nمتن: {text}"
+)
+SEARCH_CONTEXT_HEADER = (
+    "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
+)
+
+#chatbot/utils settings
+
+DEFAULT_MODEL = "qwen3:8b"
+RECENT_MESSAGES_COUNT = 6
+MAX_CONTEXT_CHARACTERS = 10000
+
+SYSTEM_PROMPT = {
+    "role": "system",
+    "content": """
+متن‌های زیر بخشی از تاریخچه‌ی قدیمی گفتگو هستند.
+آن‌ها را تا جای ممکن کوتاه و دقیق خلاصه کن.
+اطلاعات مهم، هدف کاربر، تصمیم‌ها و کارهای باقی‌مانده را حفظ کن.
+فقط متن خلاصه را برگردان.
+"""
+}
