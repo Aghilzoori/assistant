@@ -4,35 +4,19 @@ import asyncio
 import requests
 import trafilatura
 from ddgs import DDGS
+from django.conf import settings
 from django.db import transaction
 from .models import Messages, Tokenizer
 from tokenizers import Tokenizer as tok
 from modelscope import snapshot_download
 from .exceptions import SearchRequestError
 
-try:
-    _model_path = snapshot_download(
-        "Qwen/Qwen3-8B",
-        allow_patterns=["tokenizer.json", "tokenizer_config.json"]
-    )
+_model_path = snapshot_download(
+    "Qwen/Qwen3-8B",
+    allow_patterns=["tokenizer.json", "tokenizer_config.json"]
+)
 
-    tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
-except Exception:
-    pass
-
-DEFAULT_MODEL = "qwen3:8b"
-RECENT_MESSAGES_COUNT = 6
-MAX_CONTEXT_CHARACTERS = 10000
-
-SYSTEM_PROMPT = {
-    "role": "system",
-    "content": """
-متن‌های زیر بخشی از تاریخچه‌ی قدیمی گفتگو هستند.
-آن‌ها را تا جای ممکن کوتاه و دقیق خلاصه کن.
-اطلاعات مهم، هدف کاربر، تصمیم‌ها و کارهای باقی‌مانده را حفظ کن.
-فقط متن خلاصه را برگردان.
-"""
-}
+tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
 
 def get_optimal_compute_config():
     battery = psutil.sensors_battery()
@@ -61,13 +45,13 @@ class HistoryCompressor:
         return sum(len(item["content"]) for item in messages_data)
 
     @staticmethod
-    def split_by_time(messages_data, recent_count=RECENT_MESSAGES_COUNT):
+    def split_by_time(messages_data, recent_count=settings.RECENT_MESSAGES_COUNT):
         if len(messages_data) <= recent_count:
             return [], messages_data[:]
         return messages_data[:-recent_count], messages_data[-recent_count:]
 
     @staticmethod
-    def is_length_exceeding_limit(total_length, limit=MAX_CONTEXT_CHARACTERS):
+    def is_length_exceeding_limit(total_length, limit=settings.MAX_CONTEXT_CHARACTERS):
         return total_length > limit
 
     @classmethod
@@ -87,7 +71,7 @@ class HistoryCompressor:
             return raw_messages
 
         old_part, recent_part = cls.split_by_time(raw_messages)
-        summary_msg = cls.generate_summary(DEFAULT_MODEL, [SYSTEM_PROMPT] + old_part, get_optimal_compute_config())
+        summary_msg = cls.generate_summary(settings.DEFAULT_MODEL, [settings.SYSTEM_PROMPT] + old_part, get_optimal_compute_config())
         
         return [summary_msg] + recent_part
 

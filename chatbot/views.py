@@ -2,6 +2,7 @@ import asyncio
 from django.views import View
 from datetime import timedelta
 from home.models import Profile
+from django.conf import settings
 from django.utils import timezone
 from .models import Messages, Chat, Tokenizer
 from .forms import MessagesForms, ProfileForms
@@ -10,21 +11,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import StreamingHttpResponse, HttpResponseServerError, JsonResponse
 from .utils import WebSearch, HistoryCompressor, get_optimal_compute_config, stream_chat_completion, count_tokens, decrease_tokens
+
 web_search = WebSearch()
-
-
-SEARCH_MODEL = "qwen3:8b"
-CODE_MODEL = "qwen2.5-coder:7b"
-DEFAULT_MODEL = "qwen3:8b"
-
-SEARCH_PROMPT = (
-    "متن من را برای جستجو داخل یک موتور جستجو آماده کن. "
-    "فقط عبارت مناسب جستجو را برگردان.\nمتن: {text}"
-)
-
-SEARCH_CONTEXT_HEADER = (
-    "نتایج جستجوی وب (فقط برای استفاده در پاسخ؛ مستقیم کپی نکن و منبع رو ذکر کن):\n\n"
-)
 
 @login_required(login_url='login')
 def chat_page(request, pk=None):
@@ -144,18 +132,17 @@ class ChatView(View):
 
     @staticmethod
     def render_model(use_code_model):
-        return CODE_MODEL if use_code_model else DEFAULT_MODEL
+        return settings.CODE_MODEL if use_code_model else settings.DEFAULT_MODEL
 
     @staticmethod
     def extract_search_text(text):
-        """از مدل می‌خواهد متن کاربر را به کوئری جستجو تبدیل کند."""
         search_messages = [
-            {"role": "user", "content": SEARCH_PROMPT.format(text=text)}
+            {"role": "user", "content": settings.SEARCH_PROMPT.format(text=text)}
         ]
 
         full_text = ""
         for chunk in stream_chat_completion(
-            SEARCH_MODEL,
+            settings.SEARCH_MODEL,
             search_messages,
             [],
             get_optimal_compute_config(),
@@ -165,16 +152,14 @@ class ChatView(View):
 
     @staticmethod
     def search(query):
-        """اجرای جستجوی وب با کوئری آماده‌شده."""
         return asyncio.run(web_search.handle_user_query(query))
 
     @staticmethod
     def build_search_context(results):
-        """ساخت یک پیام system شامل نتایج جستجو."""
         if not results:
             return None
 
-        search_context = SEARCH_CONTEXT_HEADER
+        search_context = settings.SEARCH_CONTEXT_HEADER
         for r in results:
             search_context += (
                 f"- {r['title']}\n  {r['body']}\n  منبع: {r['href']}\n\n"
@@ -249,9 +234,6 @@ def edit_username(request):
     context = {'form': form}
     return render(request, 'chatbot/setting.html', context)
 
-def rander_page_plan(request):
-    return render(request, "chatbot/plan.html")
-
 @login_required(login_url='login')
 def make_user_pro(request):
     if request.method == "POST" and not request.user.profile.is_pro:
@@ -263,5 +245,5 @@ def make_user_pro(request):
 
         profile.save()
 
-        return redirect("rander-page-plan")
-    return redirect("rander-page-plan")
+        return redirect("setting")
+    return render(request, "chatbot/plan.html")
