@@ -1,7 +1,7 @@
-// ---------- بارگذاری پویای کتابخونه‌های مارک‌داون (برای نمایش زنده‌ی جواب مدل) ----------
-// چون در حالت رفرش، جنگو با فیلتر markdownify متن رو به HTML تبدیل می‌کنه،
-// اما در حالت استریم زنده (fetch)، این تبدیل باید سمت کلاینت هم انجام بشه،
-// وگرنه علامت‌های خام مارک‌داون (**، #، backtick و ...) بدون فرمت نمایش داده می‌شن.
+// ---------- Dynamic loading of Markdown libraries (for live display of the model's reply) ----------
+// On page refresh, Django converts the text to HTML with the markdownify filter,
+// but in live streaming mode (fetch), this conversion must also happen on the client side,
+// otherwise raw Markdown symbols (**, #, backticks, etc.) are displayed unformatted.
 function loadScript(src) {
     return new Promise(function (resolve, reject) {
         const existing = document.querySelector(`script[src="${src}"]`);
@@ -24,27 +24,27 @@ function loadScript(src) {
 
 const markdownLibsReady = Promise.all([
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js'),
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js')
+                                      loadScript('https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js')
 ]).catch(function (err) {
-    console.error('خطا در بارگذاری کتابخونه‌ی مارک‌داون، نمایش به‌صورت متن ساده انجام می‌شود:', err);
+    console.error('Error loading the Markdown library, falling back to plain text display:', err);
 });
 
-// تبدیل متن مارک‌داون به HTML امن؛ اگر کتابخونه‌ها لود نشده باشند، متن خام برمی‌گردد
+// Convert Markdown text to safe HTML; if the libraries haven't loaded, return the raw text
 function renderMarkdown(rawText) {
     if (window.marked && window.DOMPurify) {
         const html = window.marked.parse(rawText);
         return window.DOMPurify.sanitize(html);
     }
-    // فال‌بک: خروجی متن ساده (بدون فرمت) تا حداقل خطا ندهد
+    // Fallback: plain text output (no formatting) so that at least it doesn't throw an error
     const div = document.createElement('div');
     div.textContent = rawText;
     return div.innerHTML;
 }
 
-// ---------- سوییچ حالت روشن/تاریک ----------
-// حالت اولیه (روشن/تاریک) از قبل توسط اسکریپت داخل <head> فایل index.html
-// روی <html data-theme="..."> ست شده تا از چشمک‌زدن صفحه جلوگیری بشه.
-// این بخش فقط مسئول رفتار کلیک روی دکیمه و ذخیره‌ی انتخاب کاربره.
+// ---------- Light/dark mode switch ----------
+// The initial mode (light/dark) is already set on <html data-theme="..."> by the script
+// inside the <head> of index.html to prevent page flicker.
+// This section is only responsible for the button click behavior and saving the user's choice.
 (function () {
     const themeToggle = document.getElementById('themeToggle');
     if (!themeToggle) return;
@@ -59,17 +59,17 @@ function renderMarkdown(rawText) {
         try {
             localStorage.setItem('theme', next);
         } catch (e) {
-            // اگر localStorage در دسترس نبود (حالت خصوصی مرورگر و مشابه)،
-            // فقط برای همین بار بازدید تغییر اعمال می‌شه و ذخیره نمی‌شه
+            // If localStorage is unavailable (private browsing mode and similar),
+            // the change only applies for this visit and is not saved
         }
     });
 })();
 
-// ---------- منطق مخصوص صفحه‌ی چت ----------
-// این بخش فقط وقتی اجرا می‌شه که عنصر #chatApp توی صفحه وجود داشته باشه؛
-// چون chat.js از طریق index.html روی همه‌ی صفحه‌ها (مثل صفحه‌ی تنظیمات) لود
-// می‌شه، بدون این گارد، روی صفحاتی که چت توش نیست کرش می‌کرد و باعث می‌شد
-// کدهای بعدی (مثل دکمه‌ی تغییر رنگ) هم اجرا نشن.
+// ---------- Chat page specific logic ----------
+// This section only runs when the #chatApp element exists on the page;
+// because chat.js is loaded through index.html on all pages (like the settings page),
+// without this guard it would crash on pages that have no chat, which would also
+// prevent the later code (like the theme toggle button) from running.
 const chatApp = document.getElementById('chatApp');
 if (chatApp) {
     const emptyHero = document.getElementById('emptyHero');
@@ -80,7 +80,7 @@ if (chatApp) {
     const sendButton = document.getElementById('sendButton');
 
 
-    // اگر صفحه با حالت خالی بارگذاری شده، فرم رو داخل کادر خوش‌آمدگویی جابه‌جا کن
+    // If the page loaded in the empty state, move the form into the welcome box
     if (chatApp.classList.contains('is-empty')) {
         emptyHero.appendChild(form);
     }
@@ -97,7 +97,7 @@ if (chatApp) {
     window.addEventListener("resize", resizeTextarea);
     resizeTextarea();
 
-    // ---------- دکمه کپی و برچسب زبان برای بلوک‌های کد ----------
+    // ---------- Copy button and language label for code blocks ----------
     const COPY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const CHECK_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
@@ -122,11 +122,11 @@ if (chatApp) {
         yaml: "YAML", yml: "YAML",
         dockerfile: "Dockerfile",
         markdown: "Markdown", md: "Markdown",
-        plaintext: "متن", text: "متن", txt: "متن",
+        plaintext: "Text", text: "Text", txt: "Text",
         docx: "Word", xlsx: "Excel", pptx: "PowerPoint", pdf: "PDF"
     };
 
-    // تشخیص زبان از روی کلاس‌های استاندارد markdown مثل language-python / lang-python
+    // Detect the language from standard markdown classes like language-python / lang-python
     function getCodeLanguage(codeEl, preEl) {
         const sources = [codeEl ? codeEl.className : "", preEl.className || ""];
         for (const cls of sources) {
@@ -145,7 +145,7 @@ if (chatApp) {
         return LANGUAGE_LABELS[lang] || (lang.charAt(0).toUpperCase() + lang.slice(1));
     }
 
-    // پسوند فایل مناسب برای هر زبان، برای اسم‌گذاری فایل دانلودی
+    // Appropriate file extension for each language, used for naming the downloaded file
     const LANGUAGE_EXTENSIONS = {
         python: "py",
         java: "java",
@@ -176,8 +176,8 @@ if (chatApp) {
         return LANGUAGE_EXTENSIONS[lang] || lang;
     }
 
-    // حداقل تعداد خط برای اینکه یک بلوک کد به‌جای نمایش مستقیم،
-    // به‌صورت کارت «فایل» (با دکمه‌ی دانلود و پیش‌نمایش کنار صفحه) نشون داده بشه
+    // Minimum number of lines for a code block to be shown as a "file" card
+    // (with a download button and a side-panel preview) instead of being displayed directly
     const FILE_CARD_LINE_THRESHOLD = 10;
 
     const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
@@ -186,7 +186,7 @@ if (chatApp) {
 
     function countLines(text) {
         if (!text) return 0;
-        // اگه خط آخر فقط یک enter اضافه‌ست، جزو خطوط واقعی حساب نشه
+        // If the last line is just an extra newline, don't count it as a real line
         const trimmed = text.replace(/\n$/, "");
         return trimmed.length ? trimmed.split("\n").length : 0;
     }
@@ -203,9 +203,9 @@ if (chatApp) {
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     }
 
-    // ---------- پنل پیش‌نمایش فایل، کنار صفحه ----------
+    // ---------- File preview panel, on the side of the page ----------
     let filePreviewOverlay, filePreviewPanel, filePreviewNameEl, filePreviewMetaEl,
-        filePreviewCodeEl, filePreviewCopyBtn, filePreviewDownloadBtn, filePreviewCloseBtn;
+    filePreviewCodeEl, filePreviewCopyBtn, filePreviewDownloadBtn, filePreviewCloseBtn;
     let currentPreviewText = "";
     let currentPreviewFilename = "";
 
@@ -219,23 +219,23 @@ if (chatApp) {
         filePreviewPanel = document.createElement("aside");
         filePreviewPanel.className = "file-preview-panel";
         filePreviewPanel.id = "filePreviewPanel";
-        filePreviewPanel.setAttribute("aria-label", "پیش‌نمایش فایل");
+        filePreviewPanel.setAttribute("aria-label", "File preview");
         filePreviewPanel.innerHTML = `
-            <div class="file-preview-header">
-                <div class="file-preview-info">
-                    <span class="file-preview-icon">${FILE_ICON_SVG}</span>
-                    <div class="file-preview-titles">
-                        <span class="file-preview-name" id="filePreviewName"></span>
-                        <span class="file-preview-meta" id="filePreviewMeta"></span>
-                    </div>
-                </div>
-                <div class="file-preview-actions">
-                    <button type="button" class="file-preview-btn" id="filePreviewCopyBtn" title="کپی" aria-label="کپی">${COPY_ICON_SVG}</button>
-                    <button type="button" class="file-preview-btn" id="filePreviewDownloadBtn" title="دانلود" aria-label="دانلود">${DOWNLOAD_ICON_SVG}</button>
-                    <button type="button" class="file-preview-btn file-preview-close" id="filePreviewCloseBtn" title="بستن" aria-label="بستن">${CLOSE_ICON_SVG}</button>
-                </div>
-            </div>
-            <pre class="file-preview-body"><code id="filePreviewCode"></code></pre>
+        <div class="file-preview-header">
+        <div class="file-preview-info">
+        <span class="file-preview-icon">${FILE_ICON_SVG}</span>
+        <div class="file-preview-titles">
+        <span class="file-preview-name" id="filePreviewName"></span>
+        <span class="file-preview-meta" id="filePreviewMeta"></span>
+        </div>
+        </div>
+        <div class="file-preview-actions">
+        <button type="button" class="file-preview-btn" id="filePreviewCopyBtn" title="Copy" aria-label="Copy">${COPY_ICON_SVG}</button>
+        <button type="button" class="file-preview-btn" id="filePreviewDownloadBtn" title="Download" aria-label="Download">${DOWNLOAD_ICON_SVG}</button>
+        <button type="button" class="file-preview-btn file-preview-close" id="filePreviewCloseBtn" title="Close" aria-label="Close">${CLOSE_ICON_SVG}</button>
+        </div>
+        </div>
+        <pre class="file-preview-body"><code id="filePreviewCode"></code></pre>
         `;
 
         document.body.appendChild(filePreviewOverlay);
@@ -297,7 +297,7 @@ if (chatApp) {
         currentPreviewFilename = filename;
 
         filePreviewNameEl.textContent = filename;
-        filePreviewMetaEl.textContent = `${getLanguageLabel(lang)} · ${countLines(text)} خط`;
+        filePreviewMetaEl.textContent = `${getLanguageLabel(lang)} · ${countLines(text)} lines`;
         filePreviewCodeEl.textContent = text;
 
         filePreviewOverlay.classList.add("open");
@@ -312,7 +312,7 @@ if (chatApp) {
         document.body.classList.remove("file-preview-open");
     }
 
-    // شمارنده‌ی سراسری برای اسم‌گذاری فایل‌های تولید شده در همین صفحه
+    // Global counter for naming files generated on this page
     let fileCardCounter = 0;
 
     function buildFileCard(lang, codeText, filenameOverride) {
@@ -328,14 +328,14 @@ if (chatApp) {
         card.className = "code-file-card";
         card.setAttribute("role", "button");
         card.setAttribute("tabindex", "0");
-        card.setAttribute("aria-label", `نمایش فایل ${filename}`);
+        card.setAttribute("aria-label", `Show file ${filename}`);
         card.innerHTML = `
-            <span class="code-file-icon">${FILE_ICON_SVG}</span>
-            <span class="code-file-info">
-                <span class="code-file-name">${filename}</span>
-                <span class="code-file-meta">${getLanguageLabel(lang)} · ${lineCount} خط · برای پیش‌نمایش کلیک کنید</span>
-            </span>
-            <button type="button" class="code-file-download" title="دانلود فایل" aria-label="دانلود فایل">${DOWNLOAD_ICON_SVG}</button>
+        <span class="code-file-icon">${FILE_ICON_SVG}</span>
+        <span class="code-file-info">
+        <span class="code-file-name">${filename}</span>
+        <span class="code-file-meta">${getLanguageLabel(lang)} · ${lineCount} lines · Click to preview</span>
+        </span>
+        <button type="button" class="code-file-download" title="Download file" aria-label="Download file">${DOWNLOAD_ICON_SVG}</button>
         `;
 
         const downloadBtn = card.querySelector(".code-file-download");
@@ -362,11 +362,11 @@ if (chatApp) {
     function setupCodeCopyButtons() {
         const codeBlocks = document.querySelectorAll(".message pre");
         codeBlocks.forEach(function (pre) {
-            // جلوگیری از پردازش دوباره
+            // Prevent processing again
             if (
                 pre.parentElement &&
                 (pre.parentElement.classList.contains("code-wrapper") ||
-                    pre.dataset.fileCardProcessed === "true")
+                pre.dataset.fileCardProcessed === "true")
             ) {
                 return;
             }
@@ -376,35 +376,35 @@ if (chatApp) {
             const codeText = codeEl ? codeEl.innerText : pre.innerText;
             const lineCount = countLines(codeText);
 
-            // بلوک‌های کد طولانی: به‌جای نمایش کامل، یک کارت فایل نشون بده
+            // Long code blocks: show a file card instead of displaying the whole thing
             if (lineCount > FILE_CARD_LINE_THRESHOLD) {
                 pre.dataset.fileCardProcessed = "true";
                 const card = buildFileCard(lang, codeText);
                 pre.parentNode.insertBefore(card, pre);
-                pre.style.display = "none"; // متن اصلی نگه داشته می‌شه ولی نمایش داده نمی‌شه
+                pre.style.display = "none"; // The original text is kept but not displayed
                 return;
             }
 
-            // ساخت ظرف کد
+            // Create the code wrapper
             const wrapper = document.createElement("div");
             wrapper.className = "code-wrapper";
-            // قرار دادن wrapper قبل از pre
+            // Place the wrapper before pre
             pre.parentNode.insertBefore(wrapper, pre);
-            // انتقال pre داخل wrapper
+            // Move pre inside the wrapper
             wrapper.appendChild(pre);
 
-            // برچسب زبان، گوشه‌ی چپ بالا
+            // Language label, top-left corner
             const langLabel = document.createElement("span");
             langLabel.className = "code-lang-label";
             langLabel.textContent = getLanguageLabel(lang);
             wrapper.appendChild(langLabel);
 
-            // ساخت دکمه کپی، گوشه‌ی راست بالا
+            // Create the copy button, top-right corner
             const copyButton = document.createElement("button");
             copyButton.type = "button";
             copyButton.className = "copy-code-button";
-            copyButton.title = "کپی کد";
-            copyButton.setAttribute("aria-label", "کپی کد");
+            copyButton.title = "Copy code";
+            copyButton.setAttribute("aria-label", "Copy code");
             copyButton.innerHTML = COPY_ICON_SVG;
             wrapper.appendChild(copyButton);
 
@@ -418,11 +418,11 @@ if (chatApp) {
                 function showCopied() {
                     copyButton.innerHTML = CHECK_ICON_SVG;
                     copyButton.classList.add("copied");
-                    copyButton.title = "کپی شد";
+                    copyButton.title = "Copied";
                     setTimeout(function () {
                         copyButton.innerHTML = COPY_ICON_SVG;
                         copyButton.classList.remove("copied");
-                        copyButton.title = "کپی کد";
+                        copyButton.title = "Copy code";
                     }, 2000);
                 }
 
@@ -430,7 +430,7 @@ if (chatApp) {
                     await navigator.clipboard.writeText(codeText);
                     showCopied();
                 } catch (error) {
-                    // روش جایگزین برای مرورگرهای قدیمی‌تر
+                    // Fallback method for older browsers
                     const temporaryTextarea = document.createElement("textarea");
                     temporaryTextarea.value = codeText;
                     temporaryTextarea.style.position = "fixed";
@@ -447,7 +447,7 @@ if (chatApp) {
 
     setupCodeCopyButtons();
 
-    // ---------- سایدبار (باز/بسته‌شدن در موبایل، انتخاب چت، چت جدید) ----------
+    // ---------- Sidebar (open/close on mobile, chat selection, new chat) ----------
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
@@ -500,8 +500,8 @@ if (chatApp) {
 
     document.addEventListener('click', function () { setAttachMenu(false); });
     if (attachDropdown) attachDropdown.addEventListener('click', function (event) { event.stopPropagation(); });
-    // وضعیت فعال/غیرفعال بودن جستجوی وب؛ تا وقتی خود کاربر دوباره کلیک نکنه،
-    // روشن می‌مونه (یعنی برای چند پیام پشت‌سرهم هم فعال باقی می‌مونه، نه فقط یک بار)
+    // Whether web search is enabled; until the user clicks again,
+    // it stays on (meaning it remains active for several consecutive messages, not just once)
     let webSearchEnabled = false;
     let codeModeEnabled = false;
 
@@ -515,7 +515,7 @@ if (chatApp) {
         });
     }
 
-    // کلیک روی نشونگر جستجوی وب برای خاموش کردن
+    // Click on the web search indicator to turn it off
     if (webSearchBadge) {
         webSearchBadge.addEventListener('click', function () {
             webSearchEnabled = false;
@@ -524,7 +524,7 @@ if (chatApp) {
         });
     }
 
-    // فعال/غیرفعال کردن حالت کدنویسی
+    // Enable/disable code mode
     if (codeModeToggle) {
         codeModeToggle.addEventListener('click', function () {
             codeModeEnabled = !codeModeEnabled;
@@ -535,7 +535,7 @@ if (chatApp) {
         });
     }
 
-    // کلیک روی نشونگر حالت کدنویسی برای خاموش کردن
+    // Click on the code mode indicator to turn it off
     if (codeModelBadge) {
         codeModelBadge.addEventListener('click', function () {
             codeModeEnabled = false;
@@ -544,20 +544,20 @@ if (chatApp) {
         });
     }
 
-    // ---------- آپلود فایل (txt, py, css, js, html)، نرمال‌سازی سمت کلاینت و ارسال به سرور ----------
-    // چون سمت سرور از Ollama استفاده می‌شه، مدل فقط متن می‌بینه (نه فایل باینری)؛
-    // پس فایل رو همینجا با جاوااسکریپت می‌خونیم (برای فایل‌های آفیس، محتواشو به متن
-    // خام تبدیل می‌کنیم)، تمیز و یکدست می‌کنیم و به‌صورت متن (داخل بلوک کد) به پیام
-    // کاربر اضافه می‌کنیم و در قالب یک کارت فایل هم نمایش می‌دیم.
+    // ---------- File upload (txt, py, css, js, html), client-side normalization and sending to the server ----------
+    // Since the server side uses Ollama, the model only sees text (not binary files);
+    // so we read the file right here with JavaScript (for Office files, we convert the
+    // content to raw text), clean and standardize it, append it as text (inside a code
+    // block) to the user's message, and also display it as a file card.
     const fileUploadTrigger = document.getElementById('fileUploadTrigger');
     const fileUploadInput = document.getElementById('fileUploadInput');
     const attachedFilesRow = document.getElementById('attachedFilesRow');
 
-    // فرمت‌های متنی ساده: مستقیم با file.text() خونده می‌شن
+    // Plain text formats: read directly with file.text()
     const PLAIN_TEXT_EXTENSIONS = ['txt', 'py', 'css', 'js', 'html'];
-    // فرمت‌های مدرن آفیس (Open XML) + PDF: با کتابخونه‌های سمت کلاینت به متن تبدیل می‌شن
+    // Modern Office formats (Open XML) + PDF: converted to text with client-side libraries
     const OFFICE_EXTENSIONS = ['docx', 'xlsx', 'pptx', 'pdf'];
-    // فرمت‌های قدیمی و باینری آفیس: هیچ کتابخونه‌ی مطمئن سمت مرورگر برای این‌ها وجود نداره
+    // Legacy and binary Office formats: there is no reliable browser-side library for these
     const LEGACY_OFFICE_EXTENSIONS = ['doc', 'xls', 'ppt'];
 
     const ALLOWED_UPLOAD_EXTENSIONS = PLAIN_TEXT_EXTENSIONS.concat(OFFICE_EXTENSIONS);
@@ -567,10 +567,10 @@ if (chatApp) {
         docx: 'docx', xlsx: 'xlsx', pptx: 'pptx', pdf: 'pdf'
     };
 
-    // طبق درخواست، هیچ محدودیتی روی حجم فایل یا طول متن استخراج‌شده اعمال نمی‌شه.
-    // توجه: این یعنی فایل‌های خیلی بزرگ ممکنه مرورگر رو کند کنن، و پرامپت خیلی
-    // بزرگ ممکنه از ظرفیت context مدل Ollama رد بزنه (که در اون صورت خودِ Ollama
-    // یا خطا می‌ده یا ابتدای پرامپت رو نادیده می‌گیره، نه اینکه اینجا کنترل بشه).
+    // As requested, no limit is applied to the file size or the length of the extracted text.
+    // Note: this means very large files may slow down the browser, and a very large prompt
+    // may exceed the context capacity of the Ollama model (in which case Ollama itself
+    // will either return an error or ignore the beginning of the prompt; it can't be controlled here).
 
     let attachedFiles = []; // { name, content, lang }
 
@@ -579,14 +579,14 @@ if (chatApp) {
         return match ? match[1].toLowerCase() : "";
     }
 
-    // نرمال‌سازی متن فایل: حذف BOM، یکدست کردن خطوط جدید و پاک کردن فضای خالی اضافه‌ی انتهای فایل
+    // Normalize file text: remove BOM, unify newlines and trim extra trailing whitespace
     function normalizeFileText(rawText) {
         let text = rawText;
         if (text.charCodeAt(0) === 0xFEFF) {
             text = text.slice(1);
         }
         text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-        // بیش از دو خط خالی پشت‌سرهم (معمولاً محصول تبدیل فایل‌های آفیس/PDF) رو جمع کن
+        // Collapse more than two consecutive blank lines (usually a byproduct of converting Office/PDF files)
         text = text.replace(/\n{3,}/g, "\n\n");
         text = text.replace(/\s+$/, "") + "\n";
         return text;
@@ -594,20 +594,20 @@ if (chatApp) {
 
     function decodeXmlEntities(str) {
         return str
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/&quot;/g, '"')
-            .replace(/&apos;/g, "'")
-            .replace(/&amp;/g, "&");
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, "&");
     }
 
-    // ---------- بارگذاری تنبل کتابخونه‌های تبدیل فایل‌های آفیس (فقط وقتی لازم بشه) ----------
+    // ---------- Lazy loading of Office file conversion libraries (only when needed) ----------
     const OFFICE_LIB_URLS = {
         mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js", // docx
         jszip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js",                // pptx
         xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",               // xlsx
         pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",                  // pdf
-        pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"      // pdf (وب‌ورکر)
+        pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"      // pdf (web worker)
     };
 
     function loadScriptOnce(src) {
@@ -618,7 +618,7 @@ if (chatApp) {
                     resolve();
                 } else {
                     existing.addEventListener("load", function () { resolve(); });
-                    existing.addEventListener("error", function () { reject(new Error("خطا در لود " + src)); });
+                    existing.addEventListener("error", function () { reject(new Error("Error loading " + src)); });
                 }
                 return;
             }
@@ -629,7 +629,7 @@ if (chatApp) {
                 script.dataset.loaded = "true";
                 resolve();
             };
-            script.onerror = function () { reject(new Error("خطا در لود " + src)); };
+            script.onerror = function () { reject(new Error("Error loading " + src)); };
             document.head.appendChild(script);
         });
     }
@@ -639,9 +639,9 @@ if (chatApp) {
         if (!officeLibsPromise) {
             officeLibsPromise = Promise.all([
                 loadScriptOnce(OFFICE_LIB_URLS.mammoth),
-                loadScriptOnce(OFFICE_LIB_URLS.jszip),
-                loadScriptOnce(OFFICE_LIB_URLS.xlsx),
-                loadScriptOnce(OFFICE_LIB_URLS.pdf)
+                                            loadScriptOnce(OFFICE_LIB_URLS.jszip),
+                                            loadScriptOnce(OFFICE_LIB_URLS.xlsx),
+                                            loadScriptOnce(OFFICE_LIB_URLS.pdf)
             ]).then(function () {
                 if (window.pdfjsLib) {
                     window.pdfjsLib.GlobalWorkerOptions.workerSrc = OFFICE_LIB_URLS.pdfWorker;
@@ -651,7 +651,7 @@ if (chatApp) {
         return officeLibsPromise;
     }
 
-    // ---------- استخراج متن از هر فرمت آفیس ----------
+    // ---------- Extract text from each Office format ----------
     async function extractDocxText(arrayBuffer) {
         const result = await window.mammoth.extractRawText({ arrayBuffer });
         return result.value;
@@ -662,7 +662,7 @@ if (chatApp) {
         const parts = workbook.SheetNames.map(function (sheetName) {
             const sheet = workbook.Sheets[sheetName];
             const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
-            return `--- شیت: ${sheetName} ---\n${csv}`;
+            return `--- Sheet: ${sheetName} ---\n${csv}`;
         });
         return parts.join("\n\n");
     }
@@ -670,27 +670,27 @@ if (chatApp) {
     async function extractPptxText(arrayBuffer) {
         const zip = await window.JSZip.loadAsync(arrayBuffer);
         const slideFiles = Object.keys(zip.files)
-            .filter(function (name) { return /^ppt\/slides\/slide\d+\.xml$/.test(name); })
-            .sort(function (a, b) {
-                const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
-                const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
-                return numA - numB;
-            });
+        .filter(function (name) { return /^ppt\/slides\/slide\d+\.xml$/.test(name); })
+        .sort(function (a, b) {
+            const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
+            const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
+            return numA - numB;
+        });
 
         const slideTexts = [];
         for (const name of slideFiles) {
             const xml = await zip.files[name].async("string");
             const runs = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
             const text = runs
-                .map(function (run) { return decodeXmlEntities(run.replace(/<\/?a:t>/g, "")); })
-                .join(" ")
-                .trim();
+            .map(function (run) { return decodeXmlEntities(run.replace(/<\/?a:t>/g, "")); })
+            .join(" ")
+            .trim();
             slideTexts.push(text);
         }
 
         return slideTexts
-            .map(function (text, i) { return `--- اسلاید ${i + 1} ---\n${text}`; })
-            .join("\n\n");
+        .map(function (text, i) { return `--- Slide ${i + 1} ---\n${text}`; })
+        .join("\n\n");
     }
 
     async function extractPdfText(arrayBuffer) {
@@ -701,7 +701,7 @@ if (chatApp) {
             const page = await pdf.getPage(pageNum);
             const content = await page.getTextContent();
             const text = content.items.map(function (item) { return item.str; }).join(" ");
-            pageTexts.push(`--- صفحه ${pageNum} ---\n${text}`);
+            pageTexts.push(`--- Page ${pageNum} ---\n${text}`);
         }
 
         return pageTexts.join("\n\n");
@@ -720,7 +720,7 @@ if (chatApp) {
         if (ext === "pptx") return extractPptxText(buffer);
         if (ext === "pdf") return extractPdfText(buffer);
 
-        throw new Error("فرمت پشتیبانی‌نشده: " + ext);
+        throw new Error("Unsupported format: " + ext);
     }
 
     function renderAttachedFilesRow() {
@@ -732,9 +732,9 @@ if (chatApp) {
             const chip = document.createElement("div");
             chip.className = "attached-file-chip";
             chip.innerHTML = `
-                <span class="attached-file-chip-icon">${FILE_ICON_SVG}</span>
-                <span class="attached-file-chip-name">${escapeHtml(file.name)}</span>
-                <button type="button" class="attached-file-chip-remove" aria-label="حذف فایل">${CLOSE_ICON_SVG}</button>
+            <span class="attached-file-chip-icon">${FILE_ICON_SVG}</span>
+            <span class="attached-file-chip-name">${escapeHtml(file.name)}</span>
+            <button type="button" class="attached-file-chip-remove" aria-label="Remove file">${CLOSE_ICON_SVG}</button>
             `;
             chip.querySelector(".attached-file-chip-remove").addEventListener("click", function () {
                 attachedFiles.splice(index, 1);
@@ -758,14 +758,14 @@ if (chatApp) {
 
                 if (LEGACY_OFFICE_EXTENSIONS.includes(ext)) {
                     alert(
-                        `فرمت قدیمی «.${ext}» پشتیبانی نمی‌شه چون قابل‌خوندن با جاوااسکریپت مرورگر نیست.\n` +
-                        `لطفاً فایل رو تو Word/Excel/PowerPoint باز کن و با «Save As» به فرمت جدید (.${ext}x) ذخیره کن.`
+                        `The legacy ".${ext}" format is not supported because it can't be read with browser JavaScript.\n` +
+                        `Please open the file in Word/Excel/PowerPoint and use "Save As" to save it in the new format (.${ext}x).`
                     );
                     continue;
                 }
 
                 if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
-                    alert(`فرمت «.${ext}» پشتیبانی نمی‌شه. فقط txt, py, css, js, html, docx, xlsx, pptx, pdf مجازه.`);
+                    alert(`The ".${ext}" format is not supported. Only txt, py, css, js, html, docx, xlsx, pptx, pdf are allowed.`);
                     continue;
                 }
 
@@ -778,12 +778,12 @@ if (chatApp) {
                         lang: EXTENSION_TO_LANGUAGE[ext] || "plaintext"
                     });
                 } catch (err) {
-                    console.error("خطا در خوندن فایل:", file.name, err);
-                    alert(`خطا در خوندن فایل «${file.name}». مطمئن شو فایل سالمه و خراب نیست.`);
+                    console.error("Error reading file:", file.name, err);
+                    alert(`Error reading the file "${file.name}". Make sure the file is intact and not corrupted.`);
                 }
             }
 
-            // خالی کردن input تا انتخاب دوباره‌ی همون فایل هم امکان‌پذیر باشه
+            // Clear the input so that selecting the same file again is also possible
             fileUploadInput.value = "";
             renderAttachedFilesRow();
         });
@@ -798,7 +798,7 @@ if (chatApp) {
             pinButton.addEventListener('click', function (event) {
                 event.stopPropagation();
                 row.classList.toggle('pinned');
-                pinButton.title = row.classList.contains('pinned') ? 'برداشتن پین' : 'پین کردن';
+                pinButton.title = row.classList.contains('pinned') ? 'Unpin' : 'Pin';
             });
         }
 
@@ -821,18 +821,18 @@ if (chatApp) {
 
     if (newChatButton) {
         newChatButton.addEventListener('click', function () {
-            // فعلاً صفحه رو تازه می‌کنه؛ اگر مسیر جدا برای «چت جدید» داری، اینجا به همون آدرس ریدایرکت کن
+            // For now this just reloads the page; if you have a separate route for "new chat", redirect to that URL here
             window.location.reload();
         });
     }
 
-    // ارسال پیام با کلید Enter (Shift+Enter برای خط جدید)
+    // Send message with the Enter key (Shift+Enter for a new line)
     chatInput.addEventListener("keydown", function (event) {
         if (event.key !== "Enter") {
             return;
         }
         if (event.shiftKey) {
-            // رفتار عادی textarea حفظ می‌شود
+            // Keep the default textarea behavior
             setTimeout(resizeTextarea, 0);
             return;
         }
@@ -854,17 +854,17 @@ if (chatApp) {
         const div = document.createElement('div');
         div.className = `message ${role}-message`;
         div.innerHTML = `
-            <div class="message-text"></div>
-            <span class="message-time">${new Date().toLocaleString('fa-IR')}</span>
+        <div class="message-text"></div>
+        <span class="message-time">${new Date().toLocaleString('en-US')}</span>
         `;
-        // پیام کاربر همیشه متن ساده است (خطر تزریق HTML نداره چون مستقیم از input میاد
-        // و innerHTML ست نمی‌کنیم)؛ پیام دستیار ممکنه مارک‌داون داشته باشه که در محل
-        // مصرف (حلقه‌ی استریم) جداگانه رندر می‌شه.
+        // The user's message is always plain text (no HTML injection risk since it comes
+        // directly from the input and we don't set innerHTML); the assistant's message may
+        // contain Markdown, which is rendered separately where it's used (the stream loop).
         const textEl = div.querySelector('.message-text');
         textEl.textContent = text;
 
-        // اگه کاربر فایلی هم ضمیمه کرده بود، برای هر کدوم یک کارت فایل
-        // (همون کامپوننتی که برای بلوک‌های کد طولانی استفاده می‌شه) نشون بده
+        // If the user also attached files, show a file card for each one
+        // (the same component used for long code blocks)
         if (files && files.length) {
             files.forEach(function (file) {
                 const card = buildFileCard(file.lang, file.content, file.name);
@@ -887,7 +887,7 @@ if (chatApp) {
         const chatHistory = document.getElementById('chatHistory');
         if (!chatHistory) return;
 
-        // اگر این چت از قبل توی لیست هست، دیگه چیزی اضافه نکن
+        // If this chat is already in the list, don't add anything
         if (chatHistory.querySelector(`[data-chat-id="${chatId}"]`)) return;
 
         const placeholder = '00000000-0000-0000-0000-000000000000';
@@ -895,7 +895,7 @@ if (chatApp) {
         const pinUrl = (chatHistory.dataset.pinTemplate || '').replace(placeholder, chatId);
         const deleteUrl = (chatHistory.dataset.deleteTemplate || '').replace(placeholder, chatId);
 
-        // اسم چت دقیقاً مثل سرور: ۲۰ کاراکتر اول پیام
+        // Chat name exactly like the server: the first 20 characters of the message
         const chatName = escapeHtml(firstMessageText.slice(0, 20));
 
         const row = document.createElement('div');
@@ -904,30 +904,30 @@ if (chatApp) {
         row.innerHTML = `
         <button type="button" class="chat-history-item active"><a href="${pageUrl}">${chatName}</a></button>
         <div class="chat-history-actions" aria-label="Chat operations">
-            <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
-                <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="m12 17 5-5-4-4-5 5"></path>
-                        <path d="M8 21l4-4"></path>
-                        <path d="M15 3l6 6"></path>
-                    </svg>
-                </button>
-            </a>
-            <a href="${deleteUrl}">
-                <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 7h16"></path>
-                        <path d="M10 11v6"></path>
-                        <path d="M14 11v6"></path>
-                        <path d="M6 7l1 13h10l1-13"></path>
-                        <path d="M9 7V4h6v3"></path>
-                    </svg>
-                </button>
-            </a>
+        <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
+        <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m12 17 5-5-4-4-5 5"></path>
+        <path d="M8 21l4-4"></path>
+        <path d="M15 3l6 6"></path>
+        </svg>
+        </button>
+        </a>
+        <a href="${deleteUrl}">
+        <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+        <path d="M6 7l1 13h10l1-13"></path>
+        <path d="M9 7V4h6v3"></path>
+        </svg>
+        </button>
+        </a>
         </div>
-    `;
+        `;
 
-        // چت جدید بالای لیست اضافه بشه (بعد از عنوان "Recent chats")
+        // The new chat should be added at the top of the list (after the "Recent chats" title)
         const label = chatHistory.querySelector('.chat-history-label');
         if (label && label.nextSibling) {
             chatHistory.insertBefore(row, label.nextSibling);
@@ -935,7 +935,7 @@ if (chatApp) {
             chatHistory.appendChild(row);
         }
 
-        // فعال‌سازی دکمه‌های پین/حذف روی همین ردیف جدید (منطق مشابه ردیف‌های موجود)
+        // Activate the pin/delete buttons on this new row (same logic as the existing rows)
         const pinButton = row.querySelector('.pin-action');
         const deleteButton = row.querySelector('.delete-action');
 
@@ -943,7 +943,7 @@ if (chatApp) {
             pinButton.addEventListener('click', function (event) {
                 event.stopPropagation();
                 row.classList.toggle('pinned');
-                pinButton.title = row.classList.contains('pinned') ? 'برداشتن پین' : 'پین کردن';
+                pinButton.title = row.classList.contains('pinned') ? 'Unpin' : 'Pin';
             });
         }
 
@@ -962,33 +962,33 @@ if (chatApp) {
         const text = input.value.trim();
         if (!text && attachedFiles.length === 0) return;
 
-        // متنی که واقعاً برای سرور (و از اونجا برای Ollama) ارسال می‌شه: پیام کاربر
-        // به‌علاوه‌ی محتوای نرمال‌شده‌ی فایل‌های ضمیمه، داخل بلوک کد با نام فایل.
-        // چون Ollama فقط متن می‌بینه، نه فایل باینری، محتوا باید همینجا به متن پرامپت اضافه بشه.
-        let composedText = text;
+                          // The text that is actually sent to the server (and from there to Ollama): the user's
+                          // message plus the normalized content of the attached files, inside a code block with the file name.
+                          // Since Ollama only sees text, not binary files, the content must be added to the prompt text right here.
+                          let composedText = text;
         attachedFiles.forEach(function (file) {
-            composedText += `\n\n[فایل ضمیمه: ${file.name}]\n\`\`\`${file.lang}\n${file.content}\`\`\``;
+            composedText += `\n\n[Attached file: ${file.name}]\n\`\`\`${file.lang}\n${file.content}\`\`\``;
         });
 
         const formData = new FormData(form);
         formData.set('text', composedText);
-        if (webSearchEnabled) {
-            formData.append('use_web_search', '1');
-        }
-        if (codeModeEnabled) {
-            formData.append('use_code_model', '1');
-        }
+                          if (webSearchEnabled) {
+                              formData.append('use_web_search', '1');
+                          }
+                          if (codeModeEnabled) {
+                              formData.append('use_code_model', '1');
+                          }
 
-        const filesToShow = attachedFiles.slice();
+                          const filesToShow = attachedFiles.slice();
 
         exitEmptyState();
-        addMessage(text || 'فایل ارسال شد', 'user', filesToShow);
+        addMessage(text || 'File sent', 'user', filesToShow);
         input.value = '';
         attachedFiles = [];
         renderAttachedFilesRow();
         loading.style.display = 'flex';
         if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
-        sendButton.disabled = true;
+                          sendButton.disabled = true;
 
         const aiMessageEl = addMessage('', 'ai');
         const aiTextEl = aiMessageEl.querySelector('.message-text');
@@ -1003,26 +1003,26 @@ if (chatApp) {
                 throw new Error('Stream error');
             }
 
-            // اگر این اولین پیام این چت بود، سرور یک چت جدید ساخته و id آن را
-            // در هدر برگردانده. باید action فرم و آدرس صفحه را با همین id
-            // به‌روزرسانی کنیم تا پیام‌های بعدی به همین چت اضافه شوند،
-            // نه اینکه هر پیام یک چت جدید بسازد.
+            // If this was the first message of this chat, the server created a new chat and returned
+            // its id in the header. We need to update the form action and the page URL with this id
+            // so that subsequent messages are added to the same chat,
+            // rather than every message creating a new chat.
             const newChatId = res.headers.get('X-Chat-Id');
             if (newChatId && form.dataset.urlTemplate) {
                 const placeholder = '00000000-0000-0000-0000-000000000000';
                 form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
 
-                if (form.dataset.pageUrlTemplate) {
-                    const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
-                    history.replaceState({}, '', pageUrl);
-                }
+                          if (form.dataset.pageUrlTemplate) {
+                              const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
+                              history.replaceState({}, '', pageUrl);
+                          }
 
-                // اگر این چت هنوز توی سایدبار نیست (یعنی همین الان ساخته شده)
-                // یک ردیف جدید براش بسازیم، بدون نیاز به رفرش صفحه
-                addChatToSidebar(newChatId, text);
+                          // If this chat isn't in the sidebar yet (i.e. it was just created),
+                          // create a new row for it, without needing to refresh the page
+                          addChatToSidebar(newChatId, text);
             }
 
-            // منتظر بمانیم کتابخونه‌های مارک‌داون لود بشن (معمولاً خیلی سریع، از کش هم لود می‌شه)
+            // Wait for the Markdown libraries to load (usually very fast, also loads from cache)
             await markdownLibsReady;
 
             const reader = res.body.getReader();
@@ -1033,26 +1033,26 @@ if (chatApp) {
                 const { value, done } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
+                          const chunk = decoder.decode(value, { stream: true });
                 fullText += chunk;
-                // در حین استریم هم مارک‌داون رو به HTML تبدیل می‌کنیم تا نمایش زنده
-                // دقیقاً همون چیزی باشه که بعد از رفرش صفحه (توسط markdownify سرور) دیده می‌شه
+                // We convert Markdown to HTML during streaming too, so the live display
+                // is exactly what is seen after the page refreshes (via the server's markdownify)
                 aiTextEl.innerHTML = renderMarkdown(fullText);
                 messages.scrollTop = messages.scrollHeight;
             }
 
-            // بعد از پایان استریم، دکمه‌های کپی کد رو برای بلوک‌های کد جدید فعال کن
+            // After the stream ends, enable the copy-code buttons for the new code blocks
             setupCodeCopyButtons();
         } catch (err) {
-            aiTextEl.textContent = 'خطا در دریافت پاسخ';
+            aiTextEl.textContent = 'Error receiving response';
         } finally {
             loading.style.display = 'none';
             if (window.stopAiLoadingAnimation) window.stopAiLoadingAnimation();
-            sendButton.disabled = false;
+                          sendButton.disabled = false;
             input.focus();
         }
     });
-} // پایان گارد if (chatApp) { ... }
+} // End of the if (chatApp) { ... } guard
 (function () {
     const TOTAL_FRAMES = 6;
     const FRAME_INTERVAL_MS = 50;
@@ -1100,6 +1100,6 @@ if (chatApp) {
         var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         document.documentElement.setAttribute('data-theme', theme);
     } catch (e) {
-        // اگر localStorage در دسترس نبود (مثلاً حالت خصوصی مرورگر)، پیش‌فرض روشن بمونه
+        // If localStorage is unavailable (e.g. private browsing mode), default to light
     }
 })();
