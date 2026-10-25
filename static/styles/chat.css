@@ -35,8 +35,8 @@
 }
 
 /* حالت تاریک: چون .chat-app متغیرها رو محلی (مجدداً) تعریف کرده،
-   override سطح :root در main.css به تنهایی روی این بخش اثر نمی‌کنه؛
-   برای همین همینجا هم یک نسخه‌ی تاریک از همون متغیرها تعریف می‌شه. */
+ *  override سطح :root در main.css به تنهایی روی این بخش اثر نمی‌کنه؛
+ *  برای همین همینجا هم یک نسخه‌ی تاریک از همون متغیرها تعریف می‌شه. */
 [data-theme="dark"] .chat-app,
 [data-theme="dark"] .sidebar {
     --ink: #f0f0f1;
@@ -155,11 +155,15 @@
 }
 
 /* ---------- پیام‌ها ---------- */
+/* اندازه‌ی باکس پیام به اندازه‌ی پنجره بستگی داره (درصدی از عرض چت)، نه به طول متن.
+ *  فاصله‌ی متن از لبه‌ی باکس هم با --message-padding تنظیم می‌شه (۲ پیکسل). */
 .message {
-    display: inline-block;
-    width: fit-content;
+    --message-padding: 18px;
+
+    display: block;
+    width: 75%;
     max-width: 75%;
-    padding: 10px 14px;
+    padding: var(--message-padding);
     border-radius: 12px;
     line-height: 1.8;
     word-break: break-word;
@@ -177,17 +181,6 @@
 .messages::-webkit-scrollbar-thumb {
     background: var(--line-strong);
     border-radius: 10px;
-}
-
-.message {
-    display: inline-block;
-    width: fit-content;
-    max-width: 75%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    line-height: 1.8;
-    word-break: break-word;
-    box-sizing: border-box;
 }
 
 .user-message {
@@ -222,8 +215,27 @@
     color: var(--muted);
 }
 
-/* کدهای چندخطی */
+/* ---------- پالت رنگی ادیتور و بلوک‌های کد (سبک Tokyo Night) ---------- */
+:root {
+    --code-bg: #1a1b26;
+    --code-surface: #1f2335;
+    --code-surface-2: #292e42;
+    --code-surface-hover: #343a55;
+    --code-border: #3b4261;
+    --code-border-soft: #2a2f47;
+    --code-text: #c0caf5;
+    --code-muted: #565f89;
+    --code-muted-text: #8089b3;
+    --code-purple: #bb9af7;
+}
+
+/* کدهای چندخطی: ۱۰ خط نمایش داده می‌شه، بیشتر از اون داخل همین باکس اسکرول می‌خوره */
 .message pre {
+    --code-font-size: 13.5px;
+    --code-line-height: 1.7;
+    --code-visible-lines: 10;
+    --code-pad-y: 12px;
+
     direction: ltr !important;
     text-align: left !important;
 
@@ -233,26 +245,39 @@
     box-sizing: border-box;
 
     margin: 10px 0 0;
-    padding: 44px 16px 16px;
+    padding: var(--code-pad-y) 16px;
+
+    /* ارتفاع = ۱۰ خط کد + پدینگ بالا و پایین */
+    max-height: calc(var(--code-visible-lines) * var(--code-line-height) * var(--code-font-size) + 2 * var(--code-pad-y));
 
     overflow-x: auto;
     overflow-y: auto;
 
-    background: #19191b !important;
-    color: #f2f2f3 !important;
+    background: var(--code-bg) !important;
+    color: var(--code-text) !important;
 
-    border: 1px solid #2c2c2e;
+    border: 1px solid var(--code-border-soft);
     border-radius: var(--radius-sm);
 
     font-family: Consolas, Monaco, "Courier New", monospace !important;
-    font-size: 13.5px;
-    line-height: 1.7;
+    font-size: var(--code-font-size);
+    line-height: var(--code-line-height);
 
     white-space: pre !important;
     word-break: normal !important;
     overflow-wrap: normal !important;
 
     unicode-bidi: isolate;
+}
+
+.message pre::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.message pre::-webkit-scrollbar-thumb {
+    background: var(--code-border);
+    border-radius: 10px;
 }
 
 .message pre code {
@@ -293,52 +318,85 @@
 }
 
 /* پیام کاربر الان زمینه‌ی روشن داره (هم‌رنگ با پیام ربات)، پس رنگ پیش‌فرض
-   کد داخل‌متنی (rgba سیاه‌رنگ بالاتر) براش هم مناسبه و نیازی به override نیست. */
+ *  کد داخل‌متنی (rgba سیاه‌رنگ بالاتر) براش هم مناسبه و نیازی به override نیست. */
 
-/* ظرف کد و دکمه کپی */
+/* ظرف کد: نوار بالا (زبان + کپی / نمایش بیشتر / دانلود) و زیرش خود کد */
 .code-wrapper {
     position: relative;
     width: 100%;
     margin: 16px 0;
     direction: ltr;
+
+    background: var(--code-bg);
+    border: 1px solid var(--code-border-soft);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
 }
 
-.copy-code-button {
-    position: absolute;
-    top: 8px;
-    right: 8px;
+.code-wrapper pre {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
 
+.code-header {
+    border-top: 2px solid var(--lang-accent, var(--code-purple));
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 8px;
 
-    width: 30px;
-    height: 30px;
-    padding: 0;
+    padding: 6px 8px 6px 12px;
+    background: var(--code-surface);
+    border-bottom: 1px solid var(--code-border-soft);
 
-    border: 1px solid #3a3a3c;
-    border-radius: 6px;
-
-    background: #232325;
-    color: #e6e6e7;
-
-    cursor: pointer;
-    transition: 0.2s;
-
-    z-index: 2;
+    direction: ltr;
+    user-select: none;
 }
 
-.copy-code-button svg {
+.code-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.code-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    height: 28px;
+    min-width: 28px;
+    padding: 0 8px;
+
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+
+    background: var(--code-surface-2);
+    color: var(--code-text);
+
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.code-action-btn svg {
     width: 15px;
     height: 15px;
     display: block;
+    flex-shrink: 0;
 }
 
-.copy-code-button:hover {
-    background: #2f2f31;
+.code-action-btn:hover {
+    border-color: var(--lang-accent, var(--code-purple));
+    background: var(--code-surface-hover);
 }
 
-.copy-code-button.copied {
+.code-action-btn.copied {
     background: #2e7d32;
     color: #fff;
     border-color: #2e7d32;
@@ -357,8 +415,8 @@
     margin: 12px 0;
     padding: 12px 14px;
 
-    background: #1f1f21;
-    border: 1px solid #323234;
+    background: var(--code-surface);
+    border: 1px solid var(--code-border);
     border-radius: var(--radius-sm);
 
     cursor: pointer;
@@ -369,8 +427,8 @@
 }
 
 .code-file-card:hover {
-    background: #262628;
-    border-color: #46464a;
+    background: var(--code-surface-hover);
+    border-color: var(--code-muted);
 }
 
 .code-file-card:active {
@@ -392,8 +450,8 @@
     height: 34px;
     border-radius: 8px;
 
-    background: #2c2c2e;
-    color: #d7d7d9;
+    background: var(--code-border-soft);
+    color: var(--lang-accent, var(--code-purple));
 }
 
 .code-file-icon svg {
@@ -413,7 +471,7 @@
     font-family: Consolas, Monaco, "Courier New", monospace;
     font-size: 13.5px;
     font-weight: 600;
-    color: #f2f2f3;
+    color: var(--code-text);
 
     white-space: nowrap;
     overflow: hidden;
@@ -422,7 +480,7 @@
 
 .code-file-meta {
     font-size: 11.5px;
-    color: #9a9a9e;
+    color: var(--code-muted-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -438,18 +496,18 @@
     height: 32px;
     padding: 0;
 
-    border: 1px solid #3a3a3c;
+    border: 1px solid var(--code-border);
     border-radius: 7px;
 
-    background: #232325;
-    color: #e6e6e7;
+    background: var(--code-surface);
+    color: var(--code-text);
 
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
 
 .code-file-download:hover {
-    background: #2f2f31;
+    background: var(--code-surface-hover);
 }
 
 .code-file-download svg {
@@ -475,15 +533,15 @@
 }
 
 /* این پنل خارج از .chat-app به body اضافه می‌شه، پس نمی‌تونه از متغیرهای
-   تعریف‌شده روی .chat-app ارث‌بری کنه؛ برای همین اینجا نسخه‌ی مستقل خودش رو داره. */
+ *  تعریف‌شده روی .chat-app ارث‌بری کنه؛ برای همین اینجا نسخه‌ی مستقل خودش رو داره. */
 .file-preview-panel {
-    --fp-ink: #111112;
-    --fp-ink-soft: #38383a;
-    --fp-paper: #ffffff;
-    --fp-paper-sunk: #f4f4f5;
-    --fp-line: #e2e2e4;
-    --fp-line-strong: #c9c9cc;
-    --fp-muted: #8b8b8f;
+    --fp-ink: var(--code-text);
+    --fp-ink-soft: #a9b1d6;
+    --fp-paper: var(--code-bg);
+    --fp-paper-sunk: var(--code-surface);
+    --fp-line: var(--code-border-soft);
+    --fp-line-strong: var(--code-border);
+    --fp-muted: var(--code-muted-text);
 
     position: fixed;
     top: 0;
@@ -505,21 +563,13 @@
     z-index: 61;
 }
 
-[data-theme="dark"] .file-preview-panel {
-    --fp-ink: #f0f0f1;
-    --fp-ink-soft: #c9c9cc;
-    --fp-paper: #1c1c1e;
-    --fp-paper-sunk: #151516;
-    --fp-line: #2c2c2e;
-    --fp-line-strong: #3d3d40;
-    --fp-muted: #9a9a9e;
-}
-
 .file-preview-panel.open {
     transform: translateX(0);
 }
 
 .file-preview-header {
+    border-top: 3px solid var(--lang-accent, var(--code-purple));
+    background: var(--code-surface);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -541,6 +591,7 @@
 }
 
 .file-preview-icon {
+    color: var(--lang-accent, var(--code-purple)) !important;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -628,8 +679,8 @@
 
     overflow: auto;
 
-    background: #19191b;
-    color: #f2f2f3;
+    background: var(--code-bg);
+    color: var(--code-text);
 
     direction: ltr !important;
     text-align: left !important;
@@ -663,29 +714,108 @@ body.file-preview-open {
     }
 }
 
-/* برچسب زبان برنامه‌نویسی، گوشه‌ی چپ بالای بلوک کد */
-.code-lang-label {
-    position: absolute;
-    top: 8px;
-    left: 8px;
+.code-lang-label::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lang-accent, var(--code-purple));
+    flex-shrink: 0;
+}
 
+/* برچسب زبان برنامه‌نویسی، سمت چپ نوار بالای بلوک کد */
+.code-lang-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     direction: ltr;
 
-    padding: 4px 10px;
-    border: 1px solid #3a3a3c;
-    border-radius: 6px;
-
-    background: #232325;
-    color: #a7a7aa;
+    color: var(--code-muted-text);
 
     font-family: Consolas, Monaco, "Courier New", monospace;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.3px;
 
     pointer-events: none;
     user-select: none;
-    z-index: 2;
+}
+
+
+/* ---------- رنگ‌آمیزی سینتکس (highlight.js) ---------- */
+.hljs-comment,
+.hljs-quote {
+    color: #636da6;
+    font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-doctag,
+.hljs-template-tag,
+.hljs-type {
+    color: #bb9af7;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-meta .hljs-string {
+    color: #9ece6a;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet {
+    color: #ff9e64;
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+    color: #7aa2f7;
+}
+
+.hljs-title.class_,
+.hljs-built_in,
+.hljs-class .hljs-title {
+    color: #2ac3de;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-selector-class,
+.hljs-selector-attr {
+    color: #73daca;
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-deletion {
+    color: #f7768e;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params,
+.hljs-subst {
+    color: #e0af68;
+}
+
+.hljs-meta,
+.hljs-link {
+    color: #7dcfff;
+}
+
+.hljs-emphasis {
+    font-style: italic;
+}
+
+.hljs-strong {
+    font-weight: 700;
 }
 
 /* ---------- فرم چت ---------- */
@@ -822,12 +952,12 @@ body.file-preview-open {
     inset: -2px;
     border-radius: inherit;
     background: conic-gradient(from var(--glow-angle),
-            transparent 0deg,
-            transparent 205deg,
-            var(--line-strong) 255deg,
-            #ffffff 285deg,
-            var(--line-strong) 315deg,
-            transparent 360deg);
+                               transparent 0deg,
+                               transparent 205deg,
+                               var(--line-strong) 255deg,
+                               #ffffff 285deg,
+                               var(--line-strong) 315deg,
+                               transparent 360deg);
     opacity: 0;
     transition: opacity 0.25s ease;
     animation: spin-glow 2.6s linear infinite;
@@ -938,8 +1068,8 @@ body.file-preview-open {
     transform-origin: bottom left;
 
     transition: opacity .18s ease,
-                transform .18s ease,
-                visibility .18s ease;
+    transform .18s ease,
+    visibility .18s ease;
 
     z-index: 30;
 }
@@ -1003,8 +1133,8 @@ body.file-preview-open {
 }
 
 /* نشونگر «جستجوی وب فعاله»، زیر کادر متن.
-   پیش‌فرض مخفیه؛ فقط با کلاس is-visible نشون داده می‌شه (نه attribute
-   hidden، چون display:flex پایین‌تر روی hidden غالب می‌شد و مخفی نمی‌موند) */
+ *  پیش‌فرض مخفیه؛ فقط با کلاس is-visible نشون داده می‌شه (نه attribute
+ *  hidden، چون display:flex پایین‌تر روی hidden غالب می‌شد و مخفی نمی‌موند) */
 .web-search-badge {
     display: none;
     align-items: center;
@@ -1114,6 +1244,7 @@ body.file-preview-open {
 
 @media (max-width: 640px) {
     .message {
+        width: 88%;
         max-width: 88%;
     }
 

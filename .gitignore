@@ -8,3 +8,4 @@ staticfile
 db.sqlite3
 bale_bot.log
 django.log
+test.py

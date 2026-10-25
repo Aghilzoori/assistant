@@ -29,6 +29,12 @@ const markdownLibsReady = Promise.all([
     console.error('Error loading the Markdown library, falling back to plain text display:', err);
 });
 
+// Syntax highlighting library (optional: if it fails to load, code is simply shown without colours)
+const highlightLibReady = loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js')
+.catch(function (err) {
+    console.error('Error loading the highlighting library, code will be shown without colours:', err);
+});
+
 // Convert Markdown text to safe HTML; if the libraries haven't loaded, return the raw text
 function renderMarkdown(rawText) {
     if (window.marked && window.DOMPurify) {
@@ -93,346 +99,268 @@ if (chatApp) {
     }
 
 
-    chatInput.addEventListener("input", resizeTextarea);
-    window.addEventListener("resize", resizeTextarea);
-    resizeTextarea();
+    // ---------- Smart auto-scroll ----------
+    // While the model is answering, the view only follows the new text if the user is already
+    // at (or near) the bottom. As soon as the user scrolls up, we stop forcing the view down,
+    // so they can read older messages. Scrolling back to the bottom turns following on again.
+    let autoScroll = true;
+    const SCROLL_BOTTOM_THRESHOLD = 80; // px
 
-    // ---------- Copy button and language label for code blocks ----------
-    const COPY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-    const CHECK_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    function isNearBottom() {
+        return messages.scrollHeight - messages.scrollTop - messages.clientHeight < SCROLL_BOTTOM_THRESHOLD;
+    }
 
-    const LANGUAGE_LABELS = {
-        python: "Python", py: "Python",
-        java: "Java",
-        javascript: "JavaScript", js: "JavaScript",
-        typescript: "TypeScript", ts: "TypeScript",
-        bash: "Shell", sh: "Shell", shell: "Shell", zsh: "Shell", powershell: "PowerShell",
-        json: "JSON",
-        html: "HTML", xml: "XML",
-        css: "CSS", scss: "SCSS",
-        sql: "SQL",
-        c: "C", cpp: "C++", "c++": "C++",
-        csharp: "C#", "c#": "C#", cs: "C#",
-        php: "PHP",
-        go: "Go", golang: "Go",
-        rust: "Rust", rs: "Rust",
-        ruby: "Ruby", rb: "Ruby",
-        kotlin: "Kotlin",
-        swift: "Swift",
-        yaml: "YAML", yml: "YAML",
-        dockerfile: "Dockerfile",
-        markdown: "Markdown", md: "Markdown",
-        plaintext: "Text", text: "Text", txt: "Text",
-        docx: "Word", xlsx: "Excel", pptx: "PowerPoint", pdf: "PDF"
-    };
-
-    // Detect the language from standard markdown classes like language-python / lang-python
-    function getCodeLanguage(codeEl, preEl) {
-        const sources = [codeEl ? codeEl.className : "", preEl.className || ""];
-        for (const cls of sources) {
-            const match = cls.match(/(?:language|lang)-([a-zA-Z0-9+#]+)/i);
-            if (match) {
-                return match[1].toLowerCase();
-            }
+    function scrollToBottomIfFollowing() {
+        if (autoScroll) {
+            messages.scrollTop = messages.scrollHeight;
         }
-        return null;
     }
 
-    function getLanguageLabel(lang) {
-        if (!lang) {
-            return "Ai pro";
-        }
-        return LANGUAGE_LABELS[lang] || (lang.charAt(0).toUpperCase() + lang.slice(1));
-    }
+    messages.addEventListener('scroll', function () {
+        autoScroll = isNearBottom();
+    }, { passive: true });
 
-    // Appropriate file extension for each language, used for naming the downloaded file
-    const LANGUAGE_EXTENSIONS = {
-        python: "py",
-        java: "java",
-        javascript: "js",
-        typescript: "ts",
-        bash: "sh", sh: "sh", shell: "sh", zsh: "sh", powershell: "ps1",
-        json: "json",
-        html: "html", xml: "xml",
-        css: "css", scss: "scss",
-        sql: "sql",
-        c: "c", cpp: "cpp", "c++": "cpp",
-        csharp: "cs", "c#": "cs", cs: "cs",
-        php: "php",
-        go: "go", golang: "go",
-        rust: "rs", rs: "rs",
-        ruby: "rb", rb: "rb",
-        kotlin: "kt",
-        swift: "swift",
-        yaml: "yaml", yml: "yaml",
-        dockerfile: "Dockerfile",
-        markdown: "md", md: "md",
-        plaintext: "txt", text: "txt", txt: "txt",
-        docx: "docx", xlsx: "xlsx", pptx: "pptx", pdf: "pdf"
-    };
+    // Stop following immediately when the user scrolls up with the wheel / touch
+    messages.addEventListener('wheel', function (event) {
+        if (event.deltaY < 0) autoScroll = false;
+    }, { passive: true });
 
-    function getLanguageExtension(lang) {
-        if (!lang) return "txt";
-        return LANGUAGE_EXTENSIONS[lang] || lang;
-    }
+        chatInput.addEventListener("input", resizeTextarea);
+        window.addEventListener("resize", resizeTextarea);
+        resizeTextarea();
 
-    // Minimum number of lines for a code block to be shown as a "file" card
-    // (with a download button and a side-panel preview) instead of being displayed directly
-    const FILE_CARD_LINE_THRESHOLD = 10;
+        // ---------- Copy button and language label for code blocks ----------
+        const COPY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+        const CHECK_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
-    const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
-    const DOWNLOAD_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
-    const CLOSE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+        const LANGUAGE_LABELS = {
+            python: "Python", py: "Python",
+            java: "Java",
+            javascript: "JavaScript", js: "JavaScript",
+            typescript: "TypeScript", ts: "TypeScript",
+            bash: "Shell", sh: "Shell", shell: "Shell", zsh: "Shell", powershell: "PowerShell",
+            json: "JSON",
+            html: "HTML", xml: "XML",
+            css: "CSS", scss: "SCSS",
+            sql: "SQL",
+            c: "C", cpp: "C++", "c++": "C++",
+            csharp: "C#", "c#": "C#", cs: "C#",
+            php: "PHP",
+            go: "Go", golang: "Go",
+            rust: "Rust", rs: "Rust",
+            ruby: "Ruby", rb: "Ruby",
+            kotlin: "Kotlin",
+            swift: "Swift",
+            yaml: "YAML", yml: "YAML",
+            dockerfile: "Dockerfile",
+            markdown: "Markdown", md: "Markdown",
+            plaintext: "Text", text: "Text", txt: "Text",
+            docx: "Word", xlsx: "Excel", pptx: "PowerPoint", pdf: "PDF"
+        };
 
-    function countLines(text) {
-        if (!text) return 0;
-        // If the last line is just an extra newline, don't count it as a real line
-        const trimmed = text.replace(/\n$/, "");
-        return trimmed.length ? trimmed.split("\n").length : 0;
-    }
-
-    function downloadTextFile(filename, text) {
-        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    }
-
-    // ---------- File preview panel, on the side of the page ----------
-    let filePreviewOverlay, filePreviewPanel, filePreviewNameEl, filePreviewMetaEl,
-    filePreviewCodeEl, filePreviewCopyBtn, filePreviewDownloadBtn, filePreviewCloseBtn;
-    let currentPreviewText = "";
-    let currentPreviewFilename = "";
-
-    function buildFilePreviewPanel() {
-        if (filePreviewPanel) return;
-
-        filePreviewOverlay = document.createElement("div");
-        filePreviewOverlay.className = "file-preview-overlay";
-        filePreviewOverlay.id = "filePreviewOverlay";
-
-        filePreviewPanel = document.createElement("aside");
-        filePreviewPanel.className = "file-preview-panel";
-        filePreviewPanel.id = "filePreviewPanel";
-        filePreviewPanel.setAttribute("aria-label", "File preview");
-        filePreviewPanel.innerHTML = `
-        <div class="file-preview-header">
-        <div class="file-preview-info">
-        <span class="file-preview-icon">${FILE_ICON_SVG}</span>
-        <div class="file-preview-titles">
-        <span class="file-preview-name" id="filePreviewName"></span>
-        <span class="file-preview-meta" id="filePreviewMeta"></span>
-        </div>
-        </div>
-        <div class="file-preview-actions">
-        <button type="button" class="file-preview-btn" id="filePreviewCopyBtn" title="Copy" aria-label="Copy">${COPY_ICON_SVG}</button>
-        <button type="button" class="file-preview-btn" id="filePreviewDownloadBtn" title="Download" aria-label="Download">${DOWNLOAD_ICON_SVG}</button>
-        <button type="button" class="file-preview-btn file-preview-close" id="filePreviewCloseBtn" title="Close" aria-label="Close">${CLOSE_ICON_SVG}</button>
-        </div>
-        </div>
-        <pre class="file-preview-body"><code id="filePreviewCode"></code></pre>
-        `;
-
-        document.body.appendChild(filePreviewOverlay);
-        document.body.appendChild(filePreviewPanel);
-
-        filePreviewNameEl = filePreviewPanel.querySelector("#filePreviewName");
-        filePreviewMetaEl = filePreviewPanel.querySelector("#filePreviewMeta");
-        filePreviewCodeEl = filePreviewPanel.querySelector("#filePreviewCode");
-        filePreviewCopyBtn = filePreviewPanel.querySelector("#filePreviewCopyBtn");
-        filePreviewDownloadBtn = filePreviewPanel.querySelector("#filePreviewDownloadBtn");
-        filePreviewCloseBtn = filePreviewPanel.querySelector("#filePreviewCloseBtn");
-
-        filePreviewOverlay.addEventListener("click", closeFilePreview);
-        filePreviewCloseBtn.addEventListener("click", closeFilePreview);
-
-        filePreviewDownloadBtn.addEventListener("click", function () {
-            if (!currentPreviewText) return;
-            downloadTextFile(currentPreviewFilename, currentPreviewText);
-        });
-
-        filePreviewCopyBtn.addEventListener("click", async function () {
-            if (!currentPreviewText) return;
-
-            function showCopied() {
-                filePreviewCopyBtn.innerHTML = CHECK_ICON_SVG;
-                filePreviewCopyBtn.classList.add("copied");
-                setTimeout(function () {
-                    filePreviewCopyBtn.innerHTML = COPY_ICON_SVG;
-                    filePreviewCopyBtn.classList.remove("copied");
-                }, 2000);
-            }
-
-            try {
-                await navigator.clipboard.writeText(currentPreviewText);
-                showCopied();
-            } catch (error) {
-                const temporaryTextarea = document.createElement("textarea");
-                temporaryTextarea.value = currentPreviewText;
-                temporaryTextarea.style.position = "fixed";
-                temporaryTextarea.style.opacity = "0";
-                document.body.appendChild(temporaryTextarea);
-                temporaryTextarea.select();
-                document.execCommand("copy");
-                temporaryTextarea.remove();
-                showCopied();
-            }
-        });
-
-        document.addEventListener("keydown", function (event) {
-            if (event.key === "Escape" && filePreviewPanel.classList.contains("open")) {
-                closeFilePreview();
-            }
-        });
-    }
-
-    function openFilePreview(filename, lang, text) {
-        buildFilePreviewPanel();
-        currentPreviewText = text;
-        currentPreviewFilename = filename;
-
-        filePreviewNameEl.textContent = filename;
-        filePreviewMetaEl.textContent = `${getLanguageLabel(lang)} · ${countLines(text)} lines`;
-        filePreviewCodeEl.textContent = text;
-
-        filePreviewOverlay.classList.add("open");
-        filePreviewPanel.classList.add("open");
-        document.body.classList.add("file-preview-open");
-    }
-
-    function closeFilePreview() {
-        if (!filePreviewPanel) return;
-        filePreviewOverlay.classList.remove("open");
-        filePreviewPanel.classList.remove("open");
-        document.body.classList.remove("file-preview-open");
-    }
-
-    // Global counter for naming files generated on this page
-    let fileCardCounter = 0;
-
-    function buildFileCard(lang, codeText, filenameOverride) {
-        let filename = filenameOverride;
-        if (!filename) {
-            fileCardCounter += 1;
-            const extension = getLanguageExtension(lang);
-            filename = `code-${fileCardCounter}.${extension}`;
-        }
-        const lineCount = countLines(codeText);
-
-        const card = document.createElement("div");
-        card.className = "code-file-card";
-        card.setAttribute("role", "button");
-        card.setAttribute("tabindex", "0");
-        card.setAttribute("aria-label", `Show file ${filename}`);
-        card.innerHTML = `
-        <span class="code-file-icon">${FILE_ICON_SVG}</span>
-        <span class="code-file-info">
-        <span class="code-file-name">${filename}</span>
-        <span class="code-file-meta">${getLanguageLabel(lang)} · ${lineCount} lines · Click to preview</span>
-        </span>
-        <button type="button" class="code-file-download" title="Download file" aria-label="Download file">${DOWNLOAD_ICON_SVG}</button>
-        `;
-
-        const downloadBtn = card.querySelector(".code-file-download");
-        downloadBtn.addEventListener("click", function (event) {
-            event.stopPropagation();
-            downloadTextFile(filename, codeText);
-        });
-
-        function openPreview() {
-            openFilePreview(filename, lang, codeText);
-        }
-
-        card.addEventListener("click", openPreview);
-        card.addEventListener("keydown", function (event) {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                openPreview();
-            }
-        });
-
-        return card;
-    }
-
-    function setupCodeCopyButtons() {
-        const codeBlocks = document.querySelectorAll(".message pre");
-        codeBlocks.forEach(function (pre) {
-            // Prevent processing again
-            if (
-                pre.parentElement &&
-                (pre.parentElement.classList.contains("code-wrapper") ||
-                pre.dataset.fileCardProcessed === "true")
-            ) {
-                return;
-            }
-
-            const codeEl = pre.querySelector("code");
-            const lang = getCodeLanguage(codeEl, pre);
-            const codeText = codeEl ? codeEl.innerText : pre.innerText;
-            const lineCount = countLines(codeText);
-
-            // Long code blocks: show a file card instead of displaying the whole thing
-            if (lineCount > FILE_CARD_LINE_THRESHOLD) {
-                pre.dataset.fileCardProcessed = "true";
-                const card = buildFileCard(lang, codeText);
-                pre.parentNode.insertBefore(card, pre);
-                pre.style.display = "none"; // The original text is kept but not displayed
-                return;
-            }
-
-            // Create the code wrapper
-            const wrapper = document.createElement("div");
-            wrapper.className = "code-wrapper";
-            // Place the wrapper before pre
-            pre.parentNode.insertBefore(wrapper, pre);
-            // Move pre inside the wrapper
-            wrapper.appendChild(pre);
-
-            // Language label, top-left corner
-            const langLabel = document.createElement("span");
-            langLabel.className = "code-lang-label";
-            langLabel.textContent = getLanguageLabel(lang);
-            wrapper.appendChild(langLabel);
-
-            // Create the copy button, top-right corner
-            const copyButton = document.createElement("button");
-            copyButton.type = "button";
-            copyButton.className = "copy-code-button";
-            copyButton.title = "Copy code";
-            copyButton.setAttribute("aria-label", "Copy code");
-            copyButton.innerHTML = COPY_ICON_SVG;
-            wrapper.appendChild(copyButton);
-
-            copyButton.addEventListener("click", async function () {
-                const code = pre.querySelector("code");
-                const codeText = code ? code.innerText : pre.innerText;
-                if (!codeText) {
-                    return;
+        // Detect the language from standard markdown classes like language-python / lang-python
+        function getCodeLanguage(codeEl, preEl) {
+            const sources = [codeEl ? codeEl.className : "", preEl.className || ""];
+            for (const cls of sources) {
+                const match = cls.match(/(?:language|lang)-([a-zA-Z0-9+#]+)/i);
+                if (match) {
+                    return match[1].toLowerCase();
                 }
+            }
+            return null;
+        }
+
+        function getLanguageLabel(lang) {
+            if (!lang) {
+                return "Ai pro";
+            }
+            return LANGUAGE_LABELS[lang] || (lang.charAt(0).toUpperCase() + lang.slice(1));
+        }
+
+        // Appropriate file extension for each language, used for naming the downloaded file
+        const LANGUAGE_EXTENSIONS = {
+            python: "py",
+            java: "java",
+            javascript: "js",
+            typescript: "ts",
+            bash: "sh", sh: "sh", shell: "sh", zsh: "sh", powershell: "ps1",
+            json: "json",
+            html: "html", xml: "xml",
+            css: "css", scss: "scss",
+            sql: "sql",
+            c: "c", cpp: "cpp", "c++": "cpp",
+            csharp: "cs", "c#": "cs", cs: "cs",
+            php: "php",
+            go: "go", golang: "go",
+            rust: "rs", rs: "rs",
+            ruby: "rb", rb: "rb",
+            kotlin: "kt",
+            swift: "swift",
+            yaml: "yaml", yml: "yaml",
+            dockerfile: "Dockerfile",
+            markdown: "md", md: "md",
+            plaintext: "txt", text: "txt", txt: "txt",
+            docx: "docx", xlsx: "xlsx", pptx: "pptx", pdf: "pdf"
+        };
+
+        function getLanguageExtension(lang) {
+            if (!lang) return "txt";
+            return LANGUAGE_EXTENSIONS[lang] || lang;
+        }
+
+        // Accent colour of each language (used for the dot, the top border and the file icon)
+        const LANGUAGE_COLORS = {
+            python: "#ffd43b", javascript: "#f7df1e", typescript: "#3b9cff",
+            html: "#ff7a45", xml: "#ff7a45", css: "#4fa8ff", scss: "#f06fb0",
+            json: "#9ece6a", yaml: "#e0af68", sql: "#ff9e64",
+            java: "#f0883e", kotlin: "#bb9af7", swift: "#ff7a45",
+            c: "#7aa2f7", cpp: "#7aa2f7", csharp: "#bb9af7", php: "#9d8cff",
+            go: "#2ac3de", rust: "#ff9e64", ruby: "#f7768e",
+            bash: "#9ece6a", powershell: "#7aa2f7", dockerfile: "#4fa8ff",
+            markdown: "#7dcfff", plaintext: "#a9b1d6",
+            docx: "#4f8cff", xlsx: "#3fb950", pptx: "#ff7a45", pdf: "#f7768e"
+        };
+
+        function normalizeLangKey(lang) {
+            const aliases = {
+                py: "python", js: "javascript", ts: "typescript", yml: "yaml",
+                sh: "bash", shell: "bash", zsh: "bash", ps1: "powershell",
+                "c++": "cpp", "c#": "csharp", cs: "csharp", golang: "go",
+                rs: "rust", rb: "ruby", md: "markdown", text: "plaintext", txt: "plaintext"
+            };
+            const key = (lang || "").toLowerCase();
+            return aliases[key] || key;
+        }
+
+        function getLanguageColor(lang) {
+            return LANGUAGE_COLORS[normalizeLangKey(lang)] || "#bb9af7";
+        }
+
+        // Names used by highlight.js (it knows "xml" for HTML, and has no "docx"/"pdf" etc.)
+        const NON_CODE_LANGUAGES = ["plaintext", "docx", "xlsx", "pptx", "pdf"];
+        const HIGHLIGHT_MAX_CHARS = 150000; // above this the text is shown plain to keep the page fast
+
+        // Colourize a <code> element. Safe by design: any problem (unknown language, library not
+        // loaded, huge text, non-code files like docx/pdf/txt) leaves the plain text untouched.
+        // `isStillValid` lets callers cancel (e.g. the side panel was reopened with another file).
+        function highlightCodeElement(codeEl, text, lang, isStillValid) {
+            if (!codeEl || !text || text.length > HIGHLIGHT_MAX_CHARS) return;
+            let key = normalizeLangKey(lang);
+            if (!key || NON_CODE_LANGUAGES.includes(key)) return;
+            if (key === "html") key = "xml";
+
+            highlightLibReady.then(function () {
+                if (!window.hljs || !window.hljs.getLanguage(key)) return;
+                if (isStillValid && !isStillValid()) return;
+                try {
+                    const result = window.hljs.highlight(text, { language: key, ignoreIllegals: true });
+                    codeEl.innerHTML = result.value;
+                    codeEl.classList.add("hljs");
+                } catch (error) {
+                    // Leave the plain text as it is
+                }
+            });
+        }
+
+        // Minimum number of lines for a code block to be shown as a "file" card
+        // (with a download button and a side-panel preview) instead of being displayed directly
+        const FILE_CARD_LINE_THRESHOLD = 10;
+
+        const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+        const DOWNLOAD_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+        const CLOSE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+        function countLines(text) {
+            if (!text) return 0;
+            // If the last line is just an extra newline, don't count it as a real line
+            const trimmed = text.replace(/\n$/, "");
+            return trimmed.length ? trimmed.split("\n").length : 0;
+        }
+
+        function downloadTextFile(filename, text) {
+            const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        }
+
+        // ---------- File preview panel, on the side of the page ----------
+        let filePreviewOverlay, filePreviewPanel, filePreviewNameEl, filePreviewMetaEl,
+        filePreviewCodeEl, filePreviewCopyBtn, filePreviewDownloadBtn, filePreviewCloseBtn;
+        let currentPreviewText = "";
+        let currentPreviewFilename = "";
+        let currentPreviewToken = 0;
+
+        function buildFilePreviewPanel() {
+            if (filePreviewPanel) return;
+
+            filePreviewOverlay = document.createElement("div");
+            filePreviewOverlay.className = "file-preview-overlay";
+            filePreviewOverlay.id = "filePreviewOverlay";
+
+            filePreviewPanel = document.createElement("aside");
+            filePreviewPanel.className = "file-preview-panel";
+            filePreviewPanel.id = "filePreviewPanel";
+            filePreviewPanel.setAttribute("aria-label", "File preview");
+            filePreviewPanel.innerHTML = `
+            <div class="file-preview-header">
+            <div class="file-preview-info">
+            <span class="file-preview-icon">${FILE_ICON_SVG}</span>
+            <div class="file-preview-titles">
+            <span class="file-preview-name" id="filePreviewName"></span>
+            <span class="file-preview-meta" id="filePreviewMeta"></span>
+            </div>
+            </div>
+            <div class="file-preview-actions">
+            <button type="button" class="file-preview-btn" id="filePreviewCopyBtn" title="Copy" aria-label="Copy">${COPY_ICON_SVG}</button>
+            <button type="button" class="file-preview-btn" id="filePreviewDownloadBtn" title="Download" aria-label="Download">${DOWNLOAD_ICON_SVG}</button>
+            <button type="button" class="file-preview-btn file-preview-close" id="filePreviewCloseBtn" title="Close" aria-label="Close">${CLOSE_ICON_SVG}</button>
+            </div>
+            </div>
+            <pre class="file-preview-body"><code id="filePreviewCode"></code></pre>
+            `;
+
+            document.body.appendChild(filePreviewOverlay);
+            document.body.appendChild(filePreviewPanel);
+
+            filePreviewNameEl = filePreviewPanel.querySelector("#filePreviewName");
+            filePreviewMetaEl = filePreviewPanel.querySelector("#filePreviewMeta");
+            filePreviewCodeEl = filePreviewPanel.querySelector("#filePreviewCode");
+            filePreviewCopyBtn = filePreviewPanel.querySelector("#filePreviewCopyBtn");
+            filePreviewDownloadBtn = filePreviewPanel.querySelector("#filePreviewDownloadBtn");
+            filePreviewCloseBtn = filePreviewPanel.querySelector("#filePreviewCloseBtn");
+
+            filePreviewOverlay.addEventListener("click", closeFilePreview);
+            filePreviewCloseBtn.addEventListener("click", closeFilePreview);
+
+            filePreviewDownloadBtn.addEventListener("click", function () {
+                if (!currentPreviewText) return;
+                downloadTextFile(currentPreviewFilename, currentPreviewText);
+            });
+
+            filePreviewCopyBtn.addEventListener("click", async function () {
+                if (!currentPreviewText) return;
 
                 function showCopied() {
-                    copyButton.innerHTML = CHECK_ICON_SVG;
-                    copyButton.classList.add("copied");
-                    copyButton.title = "Copied";
+                    filePreviewCopyBtn.innerHTML = CHECK_ICON_SVG;
+                    filePreviewCopyBtn.classList.add("copied");
                     setTimeout(function () {
-                        copyButton.innerHTML = COPY_ICON_SVG;
-                        copyButton.classList.remove("copied");
-                        copyButton.title = "Copy code";
+                        filePreviewCopyBtn.innerHTML = COPY_ICON_SVG;
+                        filePreviewCopyBtn.classList.remove("copied");
                     }, 2000);
                 }
 
                 try {
-                    await navigator.clipboard.writeText(codeText);
+                    await navigator.clipboard.writeText(currentPreviewText);
                     showCopied();
                 } catch (error) {
-                    // Fallback method for older browsers
                     const temporaryTextarea = document.createElement("textarea");
-                    temporaryTextarea.value = codeText;
+                    temporaryTextarea.value = currentPreviewText;
                     temporaryTextarea.style.position = "fixed";
                     temporaryTextarea.style.opacity = "0";
                     document.body.appendChild(temporaryTextarea);
@@ -442,616 +370,881 @@ if (chatApp) {
                     showCopied();
                 }
             });
-        });
-    }
 
-    setupCodeCopyButtons();
-
-    // ---------- Sidebar (open/close on mobile, chat selection, new chat) ----------
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-    const newChatButton = document.getElementById('newChatButton');
-    const chatHistoryItems = document.querySelectorAll('.chat-history-item');
-    const chatRows = document.querySelectorAll('.chat-history-row');
-    const attachButton = document.getElementById('attachButton');
-    const attachDropdown = document.getElementById('attachDropdown');
-    const webImageSearch = document.getElementById('webImageSearch');
-    const webSearchBadge = document.getElementById('webSearchBadge');
-    const codeModeToggle = document.getElementById('codeModeToggle');
-    const codeModelBadge = document.getElementById('codeModelBadge');
-
-    function openSidebar() {
-        sidebar.classList.add('open');
-        sidebarBackdrop.classList.add('active');
-    }
-
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        sidebarBackdrop.classList.remove('active');
-    }
-
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', function () {
-            if (sidebar.classList.contains('open')) {
-                closeSidebar();
-            } else {
-                openSidebar();
-            }
-        });
-    }
-
-    if (sidebarBackdrop) {
-        sidebarBackdrop.addEventListener('click', closeSidebar);
-    }
-
-    function setAttachMenu(open) {
-        if (!attachButton || !attachDropdown) return;
-        attachDropdown.classList.toggle('open', open);
-        attachButton.setAttribute('aria-expanded', String(open));
-    }
-
-    if (attachButton) {
-        attachButton.addEventListener('click', function (event) {
-            event.stopPropagation();
-            setAttachMenu(!attachDropdown.classList.contains('open'));
-        });
-    }
-
-    document.addEventListener('click', function () { setAttachMenu(false); });
-    if (attachDropdown) attachDropdown.addEventListener('click', function (event) { event.stopPropagation(); });
-    // Whether web search is enabled; until the user clicks again,
-    // it stays on (meaning it remains active for several consecutive messages, not just once)
-    let webSearchEnabled = false;
-    let codeModeEnabled = false;
-
-    if (webImageSearch) {
-        webImageSearch.addEventListener('click', function () {
-            webSearchEnabled = !webSearchEnabled;
-            webImageSearch.classList.toggle('is-active', webSearchEnabled);
-            if (webSearchBadge) webSearchBadge.classList.toggle('is-visible', webSearchEnabled);
-            setAttachMenu(false);
-            input.focus();
-        });
-    }
-
-    // Click on the web search indicator to turn it off
-    if (webSearchBadge) {
-        webSearchBadge.addEventListener('click', function () {
-            webSearchEnabled = false;
-            if (webImageSearch) webImageSearch.classList.remove('is-active');
-            webSearchBadge.classList.remove('is-visible');
-        });
-    }
-
-    // Enable/disable code mode
-    if (codeModeToggle) {
-        codeModeToggle.addEventListener('click', function () {
-            codeModeEnabled = !codeModeEnabled;
-            codeModeToggle.classList.toggle('is-active', codeModeEnabled);
-            if (codeModelBadge) codeModelBadge.style.display = codeModeEnabled ? 'flex' : 'none';
-            setAttachMenu(false);
-            input.focus();
-        });
-    }
-
-    // Click on the code mode indicator to turn it off
-    if (codeModelBadge) {
-        codeModelBadge.addEventListener('click', function () {
-            codeModeEnabled = false;
-            if (codeModeToggle) codeModeToggle.classList.remove('is-active');
-            codeModelBadge.style.display = 'none';
-        });
-    }
-
-    // ---------- File upload (txt, py, css, js, html), client-side normalization and sending to the server ----------
-    // Since the server side uses Ollama, the model only sees text (not binary files);
-    // so we read the file right here with JavaScript (for Office files, we convert the
-    // content to raw text), clean and standardize it, append it as text (inside a code
-    // block) to the user's message, and also display it as a file card.
-    const fileUploadTrigger = document.getElementById('fileUploadTrigger');
-    const fileUploadInput = document.getElementById('fileUploadInput');
-    const attachedFilesRow = document.getElementById('attachedFilesRow');
-
-    // Plain text formats: read directly with file.text()
-    const PLAIN_TEXT_EXTENSIONS = ['txt', 'py', 'css', 'js', 'html'];
-    // Modern Office formats (Open XML) + PDF: converted to text with client-side libraries
-    const OFFICE_EXTENSIONS = ['docx', 'xlsx', 'pptx', 'pdf'];
-    // Legacy and binary Office formats: there is no reliable browser-side library for these
-    const LEGACY_OFFICE_EXTENSIONS = ['doc', 'xls', 'ppt'];
-
-    const ALLOWED_UPLOAD_EXTENSIONS = PLAIN_TEXT_EXTENSIONS.concat(OFFICE_EXTENSIONS);
-
-    const EXTENSION_TO_LANGUAGE = {
-        txt: 'plaintext', py: 'python', css: 'css', js: 'javascript', html: 'html',
-        docx: 'docx', xlsx: 'xlsx', pptx: 'pptx', pdf: 'pdf'
-    };
-
-    // As requested, no limit is applied to the file size or the length of the extracted text.
-    // Note: this means very large files may slow down the browser, and a very large prompt
-    // may exceed the context capacity of the Ollama model (in which case Ollama itself
-    // will either return an error or ignore the beginning of the prompt; it can't be controlled here).
-
-    let attachedFiles = []; // { name, content, lang }
-
-    function getFileExtension(filename) {
-        const match = /\.([a-zA-Z0-9]+)$/.exec(filename || "");
-        return match ? match[1].toLowerCase() : "";
-    }
-
-    // Normalize file text: remove BOM, unify newlines and trim extra trailing whitespace
-    function normalizeFileText(rawText) {
-        let text = rawText;
-        if (text.charCodeAt(0) === 0xFEFF) {
-            text = text.slice(1);
-        }
-        text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-        // Collapse more than two consecutive blank lines (usually a byproduct of converting Office/PDF files)
-        text = text.replace(/\n{3,}/g, "\n\n");
-        text = text.replace(/\s+$/, "") + "\n";
-        return text;
-    }
-
-    function decodeXmlEntities(str) {
-        return str
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&amp;/g, "&");
-    }
-
-    // ---------- Lazy loading of Office file conversion libraries (only when needed) ----------
-    const OFFICE_LIB_URLS = {
-        mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js", // docx
-        jszip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js",                // pptx
-        xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",               // xlsx
-        pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",                  // pdf
-        pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"      // pdf (web worker)
-    };
-
-    function loadScriptOnce(src) {
-        return new Promise(function (resolve, reject) {
-            const existing = document.querySelector(`script[src="${src}"]`);
-            if (existing) {
-                if (existing.dataset.loaded === "true") {
-                    resolve();
-                } else {
-                    existing.addEventListener("load", function () { resolve(); });
-                    existing.addEventListener("error", function () { reject(new Error("Error loading " + src)); });
-                }
-                return;
-            }
-            const script = document.createElement("script");
-            script.src = src;
-            script.async = true;
-            script.onload = function () {
-                script.dataset.loaded = "true";
-                resolve();
-            };
-            script.onerror = function () { reject(new Error("Error loading " + src)); };
-            document.head.appendChild(script);
-        });
-    }
-
-    let officeLibsPromise = null;
-    function ensureOfficeLibsLoaded() {
-        if (!officeLibsPromise) {
-            officeLibsPromise = Promise.all([
-                loadScriptOnce(OFFICE_LIB_URLS.mammoth),
-                                            loadScriptOnce(OFFICE_LIB_URLS.jszip),
-                                            loadScriptOnce(OFFICE_LIB_URLS.xlsx),
-                                            loadScriptOnce(OFFICE_LIB_URLS.pdf)
-            ]).then(function () {
-                if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = OFFICE_LIB_URLS.pdfWorker;
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && filePreviewPanel.classList.contains("open")) {
+                    closeFilePreview();
                 }
             });
         }
-        return officeLibsPromise;
-    }
 
-    // ---------- Extract text from each Office format ----------
-    async function extractDocxText(arrayBuffer) {
-        const result = await window.mammoth.extractRawText({ arrayBuffer });
-        return result.value;
-    }
+        function openFilePreview(filename, lang, text) {
+            buildFilePreviewPanel();
+            currentPreviewText = text;
+            currentPreviewFilename = filename;
 
-    async function extractXlsxText(arrayBuffer) {
-        const workbook = window.XLSX.read(arrayBuffer, { type: "array" });
-        const parts = workbook.SheetNames.map(function (sheetName) {
-            const sheet = workbook.Sheets[sheetName];
-            const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
-            return `--- Sheet: ${sheetName} ---\n${csv}`;
-        });
-        return parts.join("\n\n");
-    }
+            filePreviewNameEl.textContent = filename;
+            filePreviewMetaEl.textContent = `${getLanguageLabel(lang)} · ${countLines(text)} lines`;
+            filePreviewCodeEl.className = "";
+            filePreviewCodeEl.textContent = text;
+            filePreviewPanel.style.setProperty("--lang-accent", getLanguageColor(lang));
+            const previewToken = ++currentPreviewToken;
+            highlightCodeElement(filePreviewCodeEl, text, lang, function () {
+                return previewToken === currentPreviewToken;
+            });
 
-    async function extractPptxText(arrayBuffer) {
-        const zip = await window.JSZip.loadAsync(arrayBuffer);
-        const slideFiles = Object.keys(zip.files)
-        .filter(function (name) { return /^ppt\/slides\/slide\d+\.xml$/.test(name); })
-        .sort(function (a, b) {
-            const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
-            const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
-            return numA - numB;
-        });
-
-        const slideTexts = [];
-        for (const name of slideFiles) {
-            const xml = await zip.files[name].async("string");
-            const runs = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
-            const text = runs
-            .map(function (run) { return decodeXmlEntities(run.replace(/<\/?a:t>/g, "")); })
-            .join(" ")
-            .trim();
-            slideTexts.push(text);
+            filePreviewOverlay.classList.add("open");
+            filePreviewPanel.classList.add("open");
+            document.body.classList.add("file-preview-open");
         }
 
-        return slideTexts
-        .map(function (text, i) { return `--- Slide ${i + 1} ---\n${text}`; })
-        .join("\n\n");
-    }
-
-    async function extractPdfText(arrayBuffer) {
-        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const pageTexts = [];
-
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const content = await page.getTextContent();
-            const text = content.items.map(function (item) { return item.str; }).join(" ");
-            pageTexts.push(`--- Page ${pageNum} ---\n${text}`);
+        function closeFilePreview() {
+            if (!filePreviewPanel) return;
+            filePreviewOverlay.classList.remove("open");
+            filePreviewPanel.classList.remove("open");
+            document.body.classList.remove("file-preview-open");
         }
 
-        return pageTexts.join("\n\n");
-    }
+        // Global counter for naming files generated on this page
+        let fileCardCounter = 0;
 
-    async function extractRawTextFromFile(file, ext) {
-        if (PLAIN_TEXT_EXTENSIONS.includes(ext)) {
-            return file.text();
-        }
+        function buildFileCard(lang, codeText, filenameOverride) {
+            let filename = filenameOverride;
+            if (!filename) {
+                fileCardCounter += 1;
+                const extension = getLanguageExtension(lang);
+                filename = `code-${fileCardCounter}.${extension}`;
+            }
+            const lineCount = countLines(codeText);
 
-        await ensureOfficeLibsLoaded();
-        const buffer = await file.arrayBuffer();
-
-        if (ext === "docx") return extractDocxText(buffer);
-        if (ext === "xlsx") return extractXlsxText(buffer);
-        if (ext === "pptx") return extractPptxText(buffer);
-        if (ext === "pdf") return extractPdfText(buffer);
-
-        throw new Error("Unsupported format: " + ext);
-    }
-
-    function renderAttachedFilesRow() {
-        if (!attachedFilesRow) return;
-        attachedFilesRow.innerHTML = "";
-        attachedFilesRow.classList.toggle("has-files", attachedFiles.length > 0);
-
-        attachedFiles.forEach(function (file, index) {
-            const chip = document.createElement("div");
-            chip.className = "attached-file-chip";
-            chip.innerHTML = `
-            <span class="attached-file-chip-icon">${FILE_ICON_SVG}</span>
-            <span class="attached-file-chip-name">${escapeHtml(file.name)}</span>
-            <button type="button" class="attached-file-chip-remove" aria-label="Remove file">${CLOSE_ICON_SVG}</button>
+            const card = document.createElement("div");
+            card.className = "code-file-card";
+            card.setAttribute("role", "button");
+            card.setAttribute("tabindex", "0");
+            card.setAttribute("aria-label", `Show file ${filename}`);
+            card.style.setProperty("--lang-accent", getLanguageColor(lang));
+            card.innerHTML = `
+            <span class="code-file-icon">${FILE_ICON_SVG}</span>
+            <span class="code-file-info">
+            <span class="code-file-name">${filename}</span>
+            <span class="code-file-meta">${getLanguageLabel(lang)} · ${lineCount} lines · Click to preview</span>
+            </span>
+            <button type="button" class="code-file-download" title="Download file" aria-label="Download file">${DOWNLOAD_ICON_SVG}</button>
             `;
-            chip.querySelector(".attached-file-chip-remove").addEventListener("click", function () {
-                attachedFiles.splice(index, 1);
+
+            const downloadBtn = card.querySelector(".code-file-download");
+            downloadBtn.addEventListener("click", function (event) {
+                event.stopPropagation();
+                downloadTextFile(filename, codeText);
+            });
+
+            function openPreview() {
+                openFilePreview(filename, lang, codeText);
+            }
+
+            card.addEventListener("click", openPreview);
+            card.addEventListener("keydown", function (event) {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openPreview();
+                }
+            });
+
+            return card;
+        }
+
+        // Number of code lines that are visible in the block; beyond this the block scrolls inside itself
+        // (keep it in sync with --code-visible-lines in chat.css)
+        const CODE_VISIBLE_LINES = FILE_CARD_LINE_THRESHOLD;
+
+        const EXPAND_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+
+        async function copyTextToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (error) {
+                // Fallback method for older browsers
+                const temporaryTextarea = document.createElement("textarea");
+                temporaryTextarea.value = text;
+                temporaryTextarea.style.position = "fixed";
+                temporaryTextarea.style.opacity = "0";
+                document.body.appendChild(temporaryTextarea);
+                temporaryTextarea.select();
+                document.execCommand("copy");
+                temporaryTextarea.remove();
+            }
+        }
+
+        function makeCodeActionButton(className, title, innerHtml) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "code-action-btn " + className;
+            btn.title = title;
+            btn.setAttribute("aria-label", title);
+            btn.innerHTML = innerHtml;
+            return btn;
+        }
+
+        function setupCodeCopyButtons() {
+            const codeBlocks = document.querySelectorAll(".message pre");
+            codeBlocks.forEach(function (pre) {
+                // Prevent processing again
+                if (
+                    pre.dataset.codeProcessed === "true" ||
+                    (pre.parentElement && pre.parentElement.classList.contains("code-wrapper"))
+                ) {
+                    return;
+                }
+                pre.dataset.codeProcessed = "true";
+
+                const codeEl = pre.querySelector("code");
+                const lang = getCodeLanguage(codeEl, pre);
+                const codeText = codeEl ? codeEl.innerText : pre.innerText;
+                const lineCount = countLines(codeText);
+                const isLong = lineCount > CODE_VISIBLE_LINES;
+
+                fileCardCounter += 1;
+                const filename = `code-${fileCardCounter}.${getLanguageExtension(lang)}`;
+
+                // Create the code wrapper and move the pre inside it
+                const wrapper = document.createElement("div");
+                wrapper.className = "code-wrapper";
+                wrapper.style.setProperty("--lang-accent", getLanguageColor(lang));
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+
+                // Header bar: language label on the left, actions on the right
+                const header = document.createElement("div");
+                header.className = "code-header";
+
+                const langLabel = document.createElement("span");
+                langLabel.className = "code-lang-label";
+                langLabel.textContent = getLanguageLabel(lang);
+                header.appendChild(langLabel);
+
+                const actions = document.createElement("div");
+                actions.className = "code-actions";
+
+                // Copy
+                const copyButton = makeCodeActionButton("copy-code-button", "Copy code", COPY_ICON_SVG);
+                copyButton.addEventListener("click", async function () {
+                    if (!codeText) return;
+                    await copyTextToClipboard(codeText);
+                    copyButton.innerHTML = CHECK_ICON_SVG;
+                    copyButton.classList.add("copied");
+                    copyButton.title = "Copied";
+                    setTimeout(function () {
+                        copyButton.innerHTML = COPY_ICON_SVG;
+                        copyButton.classList.remove("copied");
+                        copyButton.title = "Copy code";
+                    }, 2000);
+                });
+                actions.appendChild(copyButton);
+
+                // Show more (opens the full code in the side editor), only for long code
+                if (isLong) {
+                    const moreButton = makeCodeActionButton(
+                        "show-more-code-button",
+                        "Show more",
+                        `${EXPAND_ICON_SVG}<span>Show more</span>`
+                    );
+                    moreButton.addEventListener("click", function () {
+                        openFilePreview(filename, lang, codeText);
+                    });
+                    actions.appendChild(moreButton);
+                }
+
+                // Download
+                const downloadButton = makeCodeActionButton("download-code-button", "Download", DOWNLOAD_ICON_SVG);
+                downloadButton.addEventListener("click", function () {
+                    downloadTextFile(filename, codeText);
+                });
+                actions.appendChild(downloadButton);
+
+                header.appendChild(actions);
+                wrapper.insertBefore(header, pre);
+
+                // Colourize the code (the copied/downloaded text stays the original plain text)
+                highlightCodeElement(codeEl, codeText, lang);
+            });
+        }
+
+        // ---------- Attached files in saved messages + auto-linked file names ----------
+        // After a page refresh the server renders the stored message text, which contains the line
+        //   [Attached file: test.py]
+        // followed by the file's content in a code block. Here that pair is turned back into the same
+        // file card that is shown right after sending. The server's markdown filter may also turn names
+        // like test.py / test.txt into links (because ".py" is a real domain ending); those are unlinked.
+        const EXTENSION_TO_LANGUAGE = {
+            txt: 'plaintext', py: 'python', css: 'css', js: 'javascript', html: 'html',
+            docx: 'docx', xlsx: 'xlsx', pptx: 'pptx', pdf: 'pdf'
+        };
+
+        const ATTACHED_MARKER_RE = /^\[Attached file:\s*([\s\S]+?)\s*\]$/;
+        const FILE_NAME_EXTENSIONS = [
+            "txt", "py", "js", "css", "html", "htm", "docx", "xlsx", "pptx", "pdf", "json", "xml", "yml",
+            "yaml", "md", "csv", "log", "ini", "sql", "java", "php", "go", "rb", "rs", "ts", "sh", "bat",
+            "c", "cpp", "h", "cs", "doc", "xls", "ppt"
+        ];
+
+        function unlinkFileNameLinks(root) {
+            root.querySelectorAll("a[href]").forEach(function (a) {
+                const label = (a.textContent || "").trim();
+                const ext = getFileExtension(label);
+                if (!ext || !FILE_NAME_EXTENSIONS.includes(ext)) return;
+                if (/[\/:@\s]/.test(label) || /^www\./i.test(label)) return;
+
+                // Only auto-generated links (the address is just the file name, maybe with http://)
+                const href = (a.getAttribute("href") || "").trim().replace(/^[a-z]+:\/\//i, "").replace(/\/$/, "");
+                if (href.toLowerCase() !== label.toLowerCase()) return;
+
+                a.replaceWith(document.createTextNode(a.textContent));
+            });
+        }
+
+        function convertAttachedFileMarkers(root) {
+            root.querySelectorAll(".message-text").forEach(function (textEl) {
+                Array.from(textEl.children).forEach(function (el) {
+                    if (el.tagName !== "P") return;
+                    const match = ATTACHED_MARKER_RE.exec((el.textContent || "").trim());
+                    if (!match) return;
+
+                    const filename = match[1];
+                    const next = el.nextElementSibling;
+
+                    if (next && next.tagName === "PRE") {
+                        const codeEl = next.querySelector("code");
+                        const lang = getCodeLanguage(codeEl, next);
+                        const content = codeEl ? codeEl.textContent : next.textContent;
+                        const card = buildFileCard(lang || EXTENSION_TO_LANGUAGE[getFileExtension(filename)], content, filename);
+                        next.remove();
+                        el.replaceWith(card);
+                    } else {
+                        // No code block after it: just show the name as plain text (no link)
+                        el.textContent = `[Attached file: ${filename}]`;
+                    }
+                });
+            });
+        }
+
+        function fixMessageContent(root) {
+            convertAttachedFileMarkers(root);
+            unlinkFileNameLinks(root);
+        }
+
+        fixMessageContent(messages);
+        setupCodeCopyButtons();
+
+        // ---------- Sidebar (open/close on mobile, chat selection, new chat) ----------
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        const newChatButton = document.getElementById('newChatButton');
+        const chatHistoryItems = document.querySelectorAll('.chat-history-item');
+        const chatRows = document.querySelectorAll('.chat-history-row');
+        const attachButton = document.getElementById('attachButton');
+        const attachDropdown = document.getElementById('attachDropdown');
+        const webImageSearch = document.getElementById('webImageSearch');
+        const webSearchBadge = document.getElementById('webSearchBadge');
+        const codeModeToggle = document.getElementById('codeModeToggle');
+        const codeModelBadge = document.getElementById('codeModelBadge');
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            sidebarBackdrop.classList.add('active');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            sidebarBackdrop.classList.remove('active');
+        }
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function () {
+                if (sidebar.classList.contains('open')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            });
+        }
+
+        if (sidebarBackdrop) {
+            sidebarBackdrop.addEventListener('click', closeSidebar);
+        }
+
+        function setAttachMenu(open) {
+            if (!attachButton || !attachDropdown) return;
+            attachDropdown.classList.toggle('open', open);
+            attachButton.setAttribute('aria-expanded', String(open));
+        }
+
+        if (attachButton) {
+            attachButton.addEventListener('click', function (event) {
+                event.stopPropagation();
+                setAttachMenu(!attachDropdown.classList.contains('open'));
+            });
+        }
+
+        document.addEventListener('click', function () { setAttachMenu(false); });
+        if (attachDropdown) attachDropdown.addEventListener('click', function (event) { event.stopPropagation(); });
+        // Whether web search is enabled; until the user clicks again,
+        // it stays on (meaning it remains active for several consecutive messages, not just once)
+        let webSearchEnabled = false;
+        let codeModeEnabled = false;
+
+        if (webImageSearch) {
+            webImageSearch.addEventListener('click', function () {
+                webSearchEnabled = !webSearchEnabled;
+                webImageSearch.classList.toggle('is-active', webSearchEnabled);
+                if (webSearchBadge) webSearchBadge.classList.toggle('is-visible', webSearchEnabled);
+                setAttachMenu(false);
+                input.focus();
+            });
+        }
+
+        // Click on the web search indicator to turn it off
+        if (webSearchBadge) {
+            webSearchBadge.addEventListener('click', function () {
+                webSearchEnabled = false;
+                if (webImageSearch) webImageSearch.classList.remove('is-active');
+                webSearchBadge.classList.remove('is-visible');
+            });
+        }
+
+        // Enable/disable code mode
+        if (codeModeToggle) {
+            codeModeToggle.addEventListener('click', function () {
+                codeModeEnabled = !codeModeEnabled;
+                codeModeToggle.classList.toggle('is-active', codeModeEnabled);
+                if (codeModelBadge) codeModelBadge.style.display = codeModeEnabled ? 'flex' : 'none';
+                setAttachMenu(false);
+                input.focus();
+            });
+        }
+
+        // Click on the code mode indicator to turn it off
+        if (codeModelBadge) {
+            codeModelBadge.addEventListener('click', function () {
+                codeModeEnabled = false;
+                if (codeModeToggle) codeModeToggle.classList.remove('is-active');
+                codeModelBadge.style.display = 'none';
+            });
+        }
+
+        // ---------- File upload (txt, py, css, js, html), client-side normalization and sending to the server ----------
+        // Since the server side uses Ollama, the model only sees text (not binary files);
+        // so we read the file right here with JavaScript (for Office files, we convert the
+        // content to raw text), clean and standardize it, append it as text (inside a code
+        // block) to the user's message, and also display it as a file card.
+        const fileUploadTrigger = document.getElementById('fileUploadTrigger');
+        const fileUploadInput = document.getElementById('fileUploadInput');
+        const attachedFilesRow = document.getElementById('attachedFilesRow');
+
+        // Plain text formats: read directly with file.text()
+        const PLAIN_TEXT_EXTENSIONS = ['txt', 'py', 'css', 'js', 'html'];
+        // Modern Office formats (Open XML) + PDF: converted to text with client-side libraries
+        const OFFICE_EXTENSIONS = ['docx', 'xlsx', 'pptx', 'pdf'];
+        // Legacy and binary Office formats: there is no reliable browser-side library for these
+        const LEGACY_OFFICE_EXTENSIONS = ['doc', 'xls', 'ppt'];
+
+        const ALLOWED_UPLOAD_EXTENSIONS = PLAIN_TEXT_EXTENSIONS.concat(OFFICE_EXTENSIONS);
+
+        // As requested, no limit is applied to the file size or the length of the extracted text.
+        // Note: this means very large files may slow down the browser, and a very large prompt
+        // may exceed the context capacity of the Ollama model (in which case Ollama itself
+        // will either return an error or ignore the beginning of the prompt; it can't be controlled here).
+
+        let attachedFiles = []; // { name, content, lang }
+
+        function getFileExtension(filename) {
+            const match = /\.([a-zA-Z0-9]+)$/.exec(filename || "");
+            return match ? match[1].toLowerCase() : "";
+        }
+
+        // Normalize file text: remove BOM, unify newlines and trim extra trailing whitespace
+        function normalizeFileText(rawText) {
+            let text = rawText;
+            if (text.charCodeAt(0) === 0xFEFF) {
+                text = text.slice(1);
+            }
+            text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+            // Collapse more than two consecutive blank lines (usually a byproduct of converting Office/PDF files)
+            text = text.replace(/\n{3,}/g, "\n\n");
+            text = text.replace(/\s+$/, "") + "\n";
+            return text;
+        }
+
+        function decodeXmlEntities(str) {
+            return str
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .replace(/&amp;/g, "&");
+        }
+
+        // ---------- Lazy loading of Office file conversion libraries (only when needed) ----------
+        const OFFICE_LIB_URLS = {
+            mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js", // docx
+            jszip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js",                // pptx
+            xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",               // xlsx
+            pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",                  // pdf
+            pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"      // pdf (web worker)
+        };
+
+        function loadScriptOnce(src) {
+            return new Promise(function (resolve, reject) {
+                const existing = document.querySelector(`script[src="${src}"]`);
+                if (existing) {
+                    if (existing.dataset.loaded === "true") {
+                        resolve();
+                    } else {
+                        existing.addEventListener("load", function () { resolve(); });
+                        existing.addEventListener("error", function () { reject(new Error("Error loading " + src)); });
+                    }
+                    return;
+                }
+                const script = document.createElement("script");
+                script.src = src;
+                script.async = true;
+                script.onload = function () {
+                    script.dataset.loaded = "true";
+                    resolve();
+                };
+                script.onerror = function () { reject(new Error("Error loading " + src)); };
+                document.head.appendChild(script);
+            });
+        }
+
+        let officeLibsPromise = null;
+        function ensureOfficeLibsLoaded() {
+            if (!officeLibsPromise) {
+                officeLibsPromise = Promise.all([
+                    loadScriptOnce(OFFICE_LIB_URLS.mammoth),
+                                                loadScriptOnce(OFFICE_LIB_URLS.jszip),
+                                                loadScriptOnce(OFFICE_LIB_URLS.xlsx),
+                                                loadScriptOnce(OFFICE_LIB_URLS.pdf)
+                ]).then(function () {
+                    if (window.pdfjsLib) {
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = OFFICE_LIB_URLS.pdfWorker;
+                    }
+                });
+            }
+            return officeLibsPromise;
+        }
+
+        // ---------- Extract text from each Office format ----------
+        async function extractDocxText(arrayBuffer) {
+            const result = await window.mammoth.extractRawText({ arrayBuffer });
+            return result.value;
+        }
+
+        async function extractXlsxText(arrayBuffer) {
+            const workbook = window.XLSX.read(arrayBuffer, { type: "array" });
+            const parts = workbook.SheetNames.map(function (sheetName) {
+                const sheet = workbook.Sheets[sheetName];
+                const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+                return `--- Sheet: ${sheetName} ---\n${csv}`;
+            });
+            return parts.join("\n\n");
+        }
+
+        async function extractPptxText(arrayBuffer) {
+            const zip = await window.JSZip.loadAsync(arrayBuffer);
+            const slideFiles = Object.keys(zip.files)
+            .filter(function (name) { return /^ppt\/slides\/slide\d+\.xml$/.test(name); })
+            .sort(function (a, b) {
+                const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
+                const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
+                return numA - numB;
+            });
+
+            const slideTexts = [];
+            for (const name of slideFiles) {
+                const xml = await zip.files[name].async("string");
+                const runs = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+                const text = runs
+                .map(function (run) { return decodeXmlEntities(run.replace(/<\/?a:t>/g, "")); })
+                .join(" ")
+                .trim();
+                slideTexts.push(text);
+            }
+
+            return slideTexts
+            .map(function (text, i) { return `--- Slide ${i + 1} ---\n${text}`; })
+            .join("\n\n");
+        }
+
+        async function extractPdfText(arrayBuffer) {
+            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pageTexts = [];
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const content = await page.getTextContent();
+                const text = content.items.map(function (item) { return item.str; }).join(" ");
+                pageTexts.push(`--- Page ${pageNum} ---\n${text}`);
+            }
+
+            return pageTexts.join("\n\n");
+        }
+
+        async function extractRawTextFromFile(file, ext) {
+            if (PLAIN_TEXT_EXTENSIONS.includes(ext)) {
+                return file.text();
+            }
+
+            await ensureOfficeLibsLoaded();
+            const buffer = await file.arrayBuffer();
+
+            if (ext === "docx") return extractDocxText(buffer);
+            if (ext === "xlsx") return extractXlsxText(buffer);
+            if (ext === "pptx") return extractPptxText(buffer);
+            if (ext === "pdf") return extractPdfText(buffer);
+
+            throw new Error("Unsupported format: " + ext);
+        }
+
+        function renderAttachedFilesRow() {
+            if (!attachedFilesRow) return;
+            attachedFilesRow.innerHTML = "";
+            attachedFilesRow.classList.toggle("has-files", attachedFiles.length > 0);
+
+            attachedFiles.forEach(function (file, index) {
+                const chip = document.createElement("div");
+                chip.className = "attached-file-chip";
+                chip.innerHTML = `
+                <span class="attached-file-chip-icon">${FILE_ICON_SVG}</span>
+                <span class="attached-file-chip-name">${escapeHtml(file.name)}</span>
+                <button type="button" class="attached-file-chip-remove" aria-label="Remove file">${CLOSE_ICON_SVG}</button>
+                `;
+                chip.querySelector(".attached-file-chip-remove").addEventListener("click", function () {
+                    attachedFiles.splice(index, 1);
+                    renderAttachedFilesRow();
+                });
+                attachedFilesRow.appendChild(chip);
+            });
+        }
+
+        if (fileUploadTrigger && fileUploadInput) {
+            fileUploadTrigger.addEventListener("click", function () {
+                fileUploadInput.click();
+                setAttachMenu(false);
+            });
+
+            fileUploadInput.addEventListener("change", async function () {
+                const files = Array.from(fileUploadInput.files || []);
+
+                for (const file of files) {
+                    const ext = getFileExtension(file.name);
+
+                    if (LEGACY_OFFICE_EXTENSIONS.includes(ext)) {
+                        alert(
+                            `The legacy ".${ext}" format is not supported because it can't be read with browser JavaScript.\n` +
+                            `Please open the file in Word/Excel/PowerPoint and use "Save As" to save it in the new format (.${ext}x).`
+                        );
+                        continue;
+                    }
+
+                    if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
+                        alert(`The ".${ext}" format is not supported. Only txt, py, css, js, html, docx, xlsx, pptx, pdf are allowed.`);
+                        continue;
+                    }
+
+                    try {
+                        const rawText = await extractRawTextFromFile(file, ext);
+                        const normalized = normalizeFileText(rawText);
+                        attachedFiles.push({
+                            name: file.name,
+                            content: normalized,
+                            lang: EXTENSION_TO_LANGUAGE[ext] || "plaintext"
+                        });
+                    } catch (err) {
+                        console.error("Error reading file:", file.name, err);
+                        alert(`Error reading the file "${file.name}". Make sure the file is intact and not corrupted.`);
+                    }
+                }
+
+                // Clear the input so that selecting the same file again is also possible
+                fileUploadInput.value = "";
                 renderAttachedFilesRow();
             });
-            attachedFilesRow.appendChild(chip);
-        });
-    }
+        }
 
-    if (fileUploadTrigger && fileUploadInput) {
-        fileUploadTrigger.addEventListener("click", function () {
-            fileUploadInput.click();
-            setAttachMenu(false);
-        });
+        chatRows.forEach(function (row) {
+            const item = row.querySelector('.chat-history-item');
+            const pinButton = row.querySelector('.pin-action');
+            const deleteButton = row.querySelector('.delete-action');
 
-        fileUploadInput.addEventListener("change", async function () {
-            const files = Array.from(fileUploadInput.files || []);
-
-            for (const file of files) {
-                const ext = getFileExtension(file.name);
-
-                if (LEGACY_OFFICE_EXTENSIONS.includes(ext)) {
-                    alert(
-                        `The legacy ".${ext}" format is not supported because it can't be read with browser JavaScript.\n` +
-                        `Please open the file in Word/Excel/PowerPoint and use "Save As" to save it in the new format (.${ext}x).`
-                    );
-                    continue;
-                }
-
-                if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
-                    alert(`The ".${ext}" format is not supported. Only txt, py, css, js, html, docx, xlsx, pptx, pdf are allowed.`);
-                    continue;
-                }
-
-                try {
-                    const rawText = await extractRawTextFromFile(file, ext);
-                    const normalized = normalizeFileText(rawText);
-                    attachedFiles.push({
-                        name: file.name,
-                        content: normalized,
-                        lang: EXTENSION_TO_LANGUAGE[ext] || "plaintext"
-                    });
-                } catch (err) {
-                    console.error("Error reading file:", file.name, err);
-                    alert(`Error reading the file "${file.name}". Make sure the file is intact and not corrupted.`);
-                }
+            if (pinButton) {
+                pinButton.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    row.classList.toggle('pinned');
+                    pinButton.title = row.classList.contains('pinned') ? 'Unpin' : 'Pin';
+                });
             }
 
-            // Clear the input so that selecting the same file again is also possible
-            fileUploadInput.value = "";
+            if (deleteButton) {
+                deleteButton.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    row.classList.add('removing');
+                    setTimeout(function () { row.remove(); }, 220);
+                });
+            }
+
+            if (item) {
+                item.addEventListener('click', function () {
+                    chatHistoryItems.forEach(function (i) { i.classList.remove('active'); });
+                    item.classList.add('active');
+                    closeSidebar();
+                });
+            }
+        });
+
+        if (newChatButton) {
+            newChatButton.addEventListener('click', function () {
+                // For now this just reloads the page; if you have a separate route for "new chat", redirect to that URL here
+                window.location.reload();
+            });
+        }
+
+        // Send message with the Enter key (Shift+Enter for a new line)
+        chatInput.addEventListener("keydown", function (event) {
+            if (event.key !== "Enter") {
+                return;
+            }
+            if (event.shiftKey) {
+                // Keep the default textarea behavior
+                setTimeout(resizeTextarea, 0);
+                return;
+            }
+            event.preventDefault();
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        });
+
+        function exitEmptyState() {
+            if (!chatApp.classList.contains('is-empty')) return;
+            chatApp.classList.remove('is-empty');
+            chatApp.appendChild(form);
+        }
+
+        // Same format as the server's {{ message.created|date:"Y/m/d H:i" }}
+        function formatMessageTime(d) {
+            const p = function (n) { return String(n).padStart(2, '0'); };
+            return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+        }
+
+        function addMessage(text, role, files) {
+            const div = document.createElement('div');
+            div.className = `message ${role}-message`;
+            // Same markup as the server-rendered messages in chat.html (including dir="auto"),
+            // so a live message and a message loaded after a refresh look exactly the same.
+            div.innerHTML = `
+            <div class="message-text" dir="auto"></div>
+            <span class="message-time">${formatMessageTime(new Date())}</span>
+            `;
+            // The user's message is always plain text (no HTML injection risk since it comes
+            // directly from the input and we don't set innerHTML); the assistant's message may
+            // contain Markdown, which is rendered separately where it's used (the stream loop).
+            const textEl = div.querySelector('.message-text');
+            textEl.textContent = text;
+
+            // If the user also attached files, show a file card for each one
+            // (the same component used for long code blocks)
+            if (files && files.length) {
+                files.forEach(function (file) {
+                    const card = buildFileCard(file.lang, file.content, file.name);
+                    textEl.appendChild(card);
+                });
+            }
+
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+            return div;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function addChatToSidebar(chatId, firstMessageText) {
+            const chatHistory = document.getElementById('chatHistory');
+            if (!chatHistory) return;
+
+            // If this chat is already in the list, don't add anything
+            if (chatHistory.querySelector(`[data-chat-id="${chatId}"]`)) return;
+
+            const placeholder = '00000000-0000-0000-0000-000000000000';
+            const pageUrl = (chatHistory.dataset.chatPageTemplate || '').replace(placeholder, chatId);
+            const pinUrl = (chatHistory.dataset.pinTemplate || '').replace(placeholder, chatId);
+            const deleteUrl = (chatHistory.dataset.deleteTemplate || '').replace(placeholder, chatId);
+
+            // Chat name exactly like the server: the first 20 characters of the message
+            const chatName = escapeHtml(firstMessageText.slice(0, 20));
+
+            const row = document.createElement('div');
+            row.className = 'chat-history-row';
+            row.dataset.chatId = chatId;
+            row.innerHTML = `
+            <button type="button" class="chat-history-item active"><a href="${pageUrl}">${chatName}</a></button>
+            <div class="chat-history-actions" aria-label="Chat operations">
+            <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
+            <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 17 5-5-4-4-5 5"></path>
+            <path d="M8 21l4-4"></path>
+            <path d="M15 3l6 6"></path>
+            </svg>
+            </button>
+            </a>
+            <a href="${deleteUrl}">
+            <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M6 7l1 13h10l1-13"></path>
+            <path d="M9 7V4h6v3"></path>
+            </svg>
+            </button>
+            </a>
+            </div>
+            `;
+
+            // The new chat should be added at the top of the list (after the "Recent chats" title)
+            const label = chatHistory.querySelector('.chat-history-label');
+            if (label && label.nextSibling) {
+                chatHistory.insertBefore(row, label.nextSibling);
+            } else {
+                chatHistory.appendChild(row);
+            }
+
+            // Activate the pin/delete buttons on this new row (same logic as the existing rows)
+            const pinButton = row.querySelector('.pin-action');
+            const deleteButton = row.querySelector('.delete-action');
+
+            if (pinButton) {
+                pinButton.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    row.classList.toggle('pinned');
+                    pinButton.title = row.classList.contains('pinned') ? 'Unpin' : 'Pin';
+                });
+            }
+
+            if (deleteButton) {
+                deleteButton.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    row.classList.add('removing');
+                    setTimeout(function () { row.remove(); }, 220);
+                });
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const text = input.value.trim();
+            if (!text && attachedFiles.length === 0) return;
+
+                              // The text that is actually sent to the server (and from there to Ollama): the user's
+                              // message plus the normalized content of the attached files, inside a code block with the file name.
+                              // Since Ollama only sees text, not binary files, the content must be added to the prompt text right here.
+                              let composedText = text;
+            attachedFiles.forEach(function (file) {
+                composedText += `\n\n[Attached file: ${file.name}]\n\`\`\`${file.lang}\n${file.content}\`\`\``;
+            });
+
+            const formData = new FormData(form);
+            formData.set('text', composedText);
+                              if (webSearchEnabled) {
+                                  formData.append('use_web_search', '1');
+                              }
+                              if (codeModeEnabled) {
+                                  formData.append('use_code_model', '1');
+                              }
+
+                              const filesToShow = attachedFiles.slice();
+
+            exitEmptyState();
+            autoScroll = true; // a newly sent message always jumps to the bottom
+            addMessage(text || 'File sent', 'user', filesToShow);
+            input.value = '';
+            attachedFiles = [];
             renderAttachedFilesRow();
-        });
-    }
+            loading.style.display = 'flex';
+            if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
+                              sendButton.disabled = true;
 
-    chatRows.forEach(function (row) {
-        const item = row.querySelector('.chat-history-item');
-        const pinButton = row.querySelector('.pin-action');
-        const deleteButton = row.querySelector('.delete-action');
+            const aiMessageEl = addMessage('', 'ai');
+            const aiTextEl = aiMessageEl.querySelector('.message-text');
 
-        if (pinButton) {
-            pinButton.addEventListener('click', function (event) {
-                event.stopPropagation();
-                row.classList.toggle('pinned');
-                pinButton.title = row.classList.contains('pinned') ? 'Unpin' : 'Pin';
-            });
-        }
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                });
 
-        if (deleteButton) {
-            deleteButton.addEventListener('click', function (event) {
-                event.stopPropagation();
-                row.classList.add('removing');
-                setTimeout(function () { row.remove(); }, 220);
-            });
-        }
+                if (!res.ok || !res.body) {
+                    throw new Error('Stream error');
+                }
 
-        if (item) {
-            item.addEventListener('click', function () {
-                chatHistoryItems.forEach(function (i) { i.classList.remove('active'); });
-                item.classList.add('active');
-                closeSidebar();
-            });
-        }
-    });
+                // If this was the first message of this chat, the server created a new chat and returned
+                // its id in the header. We need to update the form action and the page URL with this id
+                // so that subsequent messages are added to the same chat,
+                // rather than every message creating a new chat.
+                const newChatId = res.headers.get('X-Chat-Id');
+                if (newChatId && form.dataset.urlTemplate) {
+                    const placeholder = '00000000-0000-0000-0000-000000000000';
+                    form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
 
-    if (newChatButton) {
-        newChatButton.addEventListener('click', function () {
-            // For now this just reloads the page; if you have a separate route for "new chat", redirect to that URL here
-            window.location.reload();
-        });
-    }
+                              if (form.dataset.pageUrlTemplate) {
+                                  const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
+                                  history.replaceState({}, '', pageUrl);
+                              }
 
-    // Send message with the Enter key (Shift+Enter for a new line)
-    chatInput.addEventListener("keydown", function (event) {
-        if (event.key !== "Enter") {
-            return;
-        }
-        if (event.shiftKey) {
-            // Keep the default textarea behavior
-            setTimeout(resizeTextarea, 0);
-            return;
-        }
-        event.preventDefault();
-        if (form.requestSubmit) {
-            form.requestSubmit();
-        } else {
-            form.submit();
-        }
-    });
+                              // If this chat isn't in the sidebar yet (i.e. it was just created),
+                              // create a new row for it, without needing to refresh the page
+                              addChatToSidebar(newChatId, text);
+                }
 
-    function exitEmptyState() {
-        if (!chatApp.classList.contains('is-empty')) return;
-        chatApp.classList.remove('is-empty');
-        chatApp.appendChild(form);
-    }
+                // Wait for the Markdown libraries to load (usually very fast, also loads from cache)
+                await markdownLibsReady;
 
-    function addMessage(text, role, files) {
-        const div = document.createElement('div');
-        div.className = `message ${role}-message`;
-        div.innerHTML = `
-        <div class="message-text"></div>
-        <span class="message-time">${new Date().toLocaleString('en-US')}</span>
-        `;
-        // The user's message is always plain text (no HTML injection risk since it comes
-        // directly from the input and we don't set innerHTML); the assistant's message may
-        // contain Markdown, which is rendered separately where it's used (the stream loop).
-        const textEl = div.querySelector('.message-text');
-        textEl.textContent = text;
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let fullText = '';
 
-        // If the user also attached files, show a file card for each one
-        // (the same component used for long code blocks)
-        if (files && files.length) {
-            files.forEach(function (file) {
-                const card = buildFileCard(file.lang, file.content, file.name);
-                textEl.appendChild(card);
-            });
-        }
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
 
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
-        return div;
-    }
+                              const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    // We convert Markdown to HTML during streaming too, so the live display
+                    // is exactly what is seen after the page refreshes (via the server's markdownify)
+                    aiTextEl.innerHTML = renderMarkdown(fullText);
+                    scrollToBottomIfFollowing();
+                }
 
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function addChatToSidebar(chatId, firstMessageText) {
-        const chatHistory = document.getElementById('chatHistory');
-        if (!chatHistory) return;
-
-        // If this chat is already in the list, don't add anything
-        if (chatHistory.querySelector(`[data-chat-id="${chatId}"]`)) return;
-
-        const placeholder = '00000000-0000-0000-0000-000000000000';
-        const pageUrl = (chatHistory.dataset.chatPageTemplate || '').replace(placeholder, chatId);
-        const pinUrl = (chatHistory.dataset.pinTemplate || '').replace(placeholder, chatId);
-        const deleteUrl = (chatHistory.dataset.deleteTemplate || '').replace(placeholder, chatId);
-
-        // Chat name exactly like the server: the first 20 characters of the message
-        const chatName = escapeHtml(firstMessageText.slice(0, 20));
-
-        const row = document.createElement('div');
-        row.className = 'chat-history-row';
-        row.dataset.chatId = chatId;
-        row.innerHTML = `
-        <button type="button" class="chat-history-item active"><a href="${pageUrl}">${chatName}</a></button>
-        <div class="chat-history-actions" aria-label="Chat operations">
-        <a href="${pinUrl}?next=${encodeURIComponent(pageUrl)}">
-        <button type="button" class="chat-action pin-action" title="Pin" aria-label="Pin">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m12 17 5-5-4-4-5 5"></path>
-        <path d="M8 21l4-4"></path>
-        <path d="M15 3l6 6"></path>
-        </svg>
-        </button>
-        </a>
-        <a href="${deleteUrl}">
-        <button type="button" class="chat-action delete-action" title="Delete" aria-label="Delete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 7h16"></path>
-        <path d="M10 11v6"></path>
-        <path d="M14 11v6"></path>
-        <path d="M6 7l1 13h10l1-13"></path>
-        <path d="M9 7V4h6v3"></path>
-        </svg>
-        </button>
-        </a>
-        </div>
-        `;
-
-        // The new chat should be added at the top of the list (after the "Recent chats" title)
-        const label = chatHistory.querySelector('.chat-history-label');
-        if (label && label.nextSibling) {
-            chatHistory.insertBefore(row, label.nextSibling);
-        } else {
-            chatHistory.appendChild(row);
-        }
-
-        // Activate the pin/delete buttons on this new row (same logic as the existing rows)
-        const pinButton = row.querySelector('.pin-action');
-        const deleteButton = row.querySelector('.delete-action');
-
-        if (pinButton) {
-            pinButton.addEventListener('click', function (event) {
-                event.stopPropagation();
-                row.classList.toggle('pinned');
-                pinButton.title = row.classList.contains('pinned') ? 'Unpin' : 'Pin';
-            });
-        }
-
-        if (deleteButton) {
-            deleteButton.addEventListener('click', function (event) {
-                event.stopPropagation();
-                row.classList.add('removing');
-                setTimeout(function () { row.remove(); }, 220);
-            });
-        }
-    }
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const text = input.value.trim();
-        if (!text && attachedFiles.length === 0) return;
-
-                          // The text that is actually sent to the server (and from there to Ollama): the user's
-                          // message plus the normalized content of the attached files, inside a code block with the file name.
-                          // Since Ollama only sees text, not binary files, the content must be added to the prompt text right here.
-                          let composedText = text;
-        attachedFiles.forEach(function (file) {
-            composedText += `\n\n[Attached file: ${file.name}]\n\`\`\`${file.lang}\n${file.content}\`\`\``;
-        });
-
-        const formData = new FormData(form);
-        formData.set('text', composedText);
-                          if (webSearchEnabled) {
-                              formData.append('use_web_search', '1');
-                          }
-                          if (codeModeEnabled) {
-                              formData.append('use_code_model', '1');
-                          }
-
-                          const filesToShow = attachedFiles.slice();
-
-        exitEmptyState();
-        addMessage(text || 'File sent', 'user', filesToShow);
-        input.value = '';
-        attachedFiles = [];
-        renderAttachedFilesRow();
-        loading.style.display = 'flex';
-        if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
-                          sendButton.disabled = true;
-
-        const aiMessageEl = addMessage('', 'ai');
-        const aiTextEl = aiMessageEl.querySelector('.message-text');
-
-        try {
-            const res = await fetch(form.action, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!res.ok || !res.body) {
-                throw new Error('Stream error');
+                // After the stream ends, clean up file names and enable the code buttons for the new code blocks
+                fixMessageContent(aiMessageEl);
+                setupCodeCopyButtons();
+            } catch (err) {
+                aiTextEl.textContent = 'Error receiving response';
+            } finally {
+                loading.style.display = 'none';
+                if (window.stopAiLoadingAnimation) window.stopAiLoadingAnimation();
+                              sendButton.disabled = false;
+                input.focus();
             }
-
-            // If this was the first message of this chat, the server created a new chat and returned
-            // its id in the header. We need to update the form action and the page URL with this id
-            // so that subsequent messages are added to the same chat,
-            // rather than every message creating a new chat.
-            const newChatId = res.headers.get('X-Chat-Id');
-            if (newChatId && form.dataset.urlTemplate) {
-                const placeholder = '00000000-0000-0000-0000-000000000000';
-                form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
-
-                          if (form.dataset.pageUrlTemplate) {
-                              const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
-                              history.replaceState({}, '', pageUrl);
-                          }
-
-                          // If this chat isn't in the sidebar yet (i.e. it was just created),
-                          // create a new row for it, without needing to refresh the page
-                          addChatToSidebar(newChatId, text);
-            }
-
-            // Wait for the Markdown libraries to load (usually very fast, also loads from cache)
-            await markdownLibsReady;
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let fullText = '';
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                          const chunk = decoder.decode(value, { stream: true });
-                fullText += chunk;
-                // We convert Markdown to HTML during streaming too, so the live display
-                // is exactly what is seen after the page refreshes (via the server's markdownify)
-                aiTextEl.innerHTML = renderMarkdown(fullText);
-                messages.scrollTop = messages.scrollHeight;
-            }
-
-            // After the stream ends, enable the copy-code buttons for the new code blocks
-            setupCodeCopyButtons();
-        } catch (err) {
-            aiTextEl.textContent = 'Error receiving response';
-        } finally {
-            loading.style.display = 'none';
-            if (window.stopAiLoadingAnimation) window.stopAiLoadingAnimation();
-                          sendButton.disabled = false;
-            input.focus();
-        }
-    });
+        });
 } // End of the if (chatApp) { ... } guard
 (function () {
     const TOTAL_FRAMES = 6;
