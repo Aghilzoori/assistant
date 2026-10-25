@@ -18,6 +18,8 @@ _model_path = snapshot_download(
 
 tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
 
+
+#To test and prevent my system from resetting
 def get_optimal_compute_config():
     battery = psutil.sensors_battery()
     if battery and battery.power_plugged:
