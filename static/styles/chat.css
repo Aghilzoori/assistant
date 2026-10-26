@@ -1405,32 +1405,6 @@ body.file-preview-open {
     margin: 0;
 }
 
-.new-chat-logo {
-    order: -1;
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 1px solid var(--line-strong);
-    border-radius: 11px;
-    background: var(--ink);
-    color: var(--paper);
-    animation: logo-breathe 2.8s ease-in-out infinite;
-}
-
-
-
-.new-chat-logo img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
-
-
 @keyframes logo-breathe {
 
     0%,
