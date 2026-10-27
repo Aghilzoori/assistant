@@ -575,8 +575,8 @@ if (chatApp) {
                                   return btn;
                               }
 
-                              function setupCodeCopyButtons() {
-                                  const codeBlocks = document.querySelectorAll(".message pre");
+                              function setupCodeCopyButtons(root) {
+                                  const codeBlocks = (root || document).querySelectorAll(".message pre");
                                   codeBlocks.forEach(function (pre) {
                                       // Prevent processing again
                                       if (
@@ -1097,12 +1097,6 @@ if (chatApp) {
                                                                                                                        }
                                                                                                                    });
 
-                                                                                                                   if (newChatButton) {
-                                                                                                                       newChatButton.addEventListener('click', function () {
-                                                                                                                           // For now this just reloads the page; if you have a separate route for "new chat", redirect to that URL here
-                                                                                                                           window.location.reload();
-                                                                                                                       });
-                                                                                                                   }
 
                                                                                                                    // Send message with the Enter key (Shift+Enter for a new line)
                                                                                                                    chatInput.addEventListener("keydown", function (event) {
@@ -1242,11 +1236,169 @@ if (chatApp) {
                                                                                                                    }
                                                                                                                    }
 
+                                                                                                                   // ---------- Switching between chats without a page reload ----------
+                                                                                                                   // Opening another chat used to load a whole new page, which cancelled the reply that was still
+                                                                                                                   // being received. Now the chat is swapped inside the same page: the running reply keeps being
+                                                                                                                   // received in the background, and when the user returns, the live message is shown again.
+                                                                                                                   const NO_CHAT_ID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+                                                                                                                   let viewPath = location.pathname;           // path of the chat that is currently on screen
+                                                                                                                   const activeStreams = new Map();            // path -> reply that is still being received
+                                                                                                                   const chatSnapshots = new Map();            // path -> message nodes of a chat we left while it was replying
+                                                                                                                   let switchToken = 0;
+
+                                                                                                                   function getChatIdByPath(path) {
+                                                                                                                       const rows = document.querySelectorAll('#chatHistory .chat-history-row');
+                                                                                                                       for (const row of rows) {
+                                                                                                                           const link = row.querySelector('.chat-history-item a');
+                                                                                                                           if (link && new URL(link.href, location.href).pathname === path) return row.dataset.chatId || null;
+                                                                                                                       }
+                                                                                                                       return null;
+                                                                                                                   }
+
+                                                                                                                   function refreshSendState() {
+                                                                                                                       sendButton.disabled = activeStreams.has(viewPath);
+                                                                                                                   }
+
+                                                                                                                   function rekeyChatStream(stream, newPath) {
+                                                                                                                       const oldPath = stream.path;
+                                                                                                                       if (oldPath === newPath) return;
+                                                                                                                   activeStreams.delete(oldPath);
+                                                                                                                       stream.path = newPath;
+                                                                                                                       activeStreams.set(newPath, stream);
+                                                                                                                       if (chatSnapshots.has(oldPath)) {
+                                                                                                                           const snap = chatSnapshots.get(oldPath);
+                                                                                                                           chatSnapshots.delete(oldPath);
+                                                                                                                           snap.formAction = stream.formAction;
+                                                                                                                           chatSnapshots.set(newPath, snap);
+                                                                                                                       }
+                                                                                                                       if (viewPath === oldPath) viewPath = newPath;
+                                                                                                                   }
+
+                                                                                                                   function stashCurrentChat() {
+                                                                                                                       // Only a chat that is still receiving a reply needs to be kept alive
+                                                                                                                       const stream = activeStreams.get(viewPath);
+                                                                                                                       if (!stream) return;
+                                                                                                                   chatSnapshots.set(viewPath, {
+                                                                                                                       nodes: Array.from(messages.childNodes),
+                                                                                                                                     formAction: form.action,
+                                                                                                                                         stream: stream
+                                                                                                                   });
+                                                                                                                   }
+
+                                                                                                                   function setEmptyState(empty) {
+                                                                                                                       if (empty) {
+                                                                                                                           if (!chatApp.classList.contains('is-empty')) {
+                                                                                                                               chatApp.classList.add('is-empty');
+                                                                                                                               emptyHero.appendChild(form);
+                                                                                                                           }
+                                                                                                                       } else {
+                                                                                                                           exitEmptyState();
+                                                                                                                       }
+                                                                                                                   }
+
+                                                                                                                   function markActiveChat(path) {
+                                                                                                                       document.querySelectorAll('.chat-history-item').forEach(function (i) { i.classList.remove('active'); });
+                                                                                                                       document.querySelectorAll('#chatHistory .chat-history-row').forEach(function (row) {
+                                                                                                                           const link = row.querySelector('.chat-history-item a');
+                                                                                                                           if (link && new URL(link.href, location.href).pathname === path) {
+                                                                                                                               row.querySelector('.chat-history-item').classList.add('active');
+                                                                                                                           }
+                                                                                                                       });
+                                                                                                                   }
+
+                                                                                                                   async function switchToChat(url, push) {
+                                                                                                                       const target = new URL(url, location.href);
+                                                                                                                       if (target.pathname === viewPath) {
+                                                                                                                           closeSidebar();
+                                                                                                                           return;
+                                                                                                                       }
+                                                                                                                       const token = ++switchToken;
+
+                                                                                                                       // A reply of a brand-new chat that has no id yet must not be shown for the "new chat" page
+                                                                                                                       let snap = chatSnapshots.get(target.pathname);
+                                                                                                                       if (snap && !snap.stream.chatId) snap = null;
+
+                                                                                                                   let doc = null;
+                                                                                                                       if (!snap) {
+                                                                                                                           try {
+                                                                                                                               const res = await fetch(target.href, { credentials: 'same-origin' });
+                                                                                                                               if (!res.ok) throw new Error('Bad response');
+                                                                                                                   doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+                                                                                                                               if (!doc.getElementById('messages')) throw new Error('Not a chat page');
+                                                                                                                           } catch (err) {
+                                                                                                                               window.location.href = target.href; // fall back to a normal page load
+                                                                                                                               return;
+                                                                                                                           }
+                                                                                                                           if (token !== switchToken) return; // the user already clicked another chat
+                                                                                                                       }
+
+                                                                                                                       stashCurrentChat();
+                                                                                                                       messages.replaceChildren();
+
+                                                                                                                       if (snap) {
+                                                                                                                           snap.nodes.forEach(function (node) { messages.appendChild(node); });
+                                                                                                                           chatSnapshots.delete(target.pathname);
+                                                                                                                           form.action = snap.formAction;
+                                                                                                                   setEmptyState(false);
+                                                                                                                       } else {
+                                                                                                                           const newMessages = doc.getElementById('messages');
+                                                                                                                           Array.from(newMessages.childNodes).forEach(function (node) {
+                                                                                                                               messages.appendChild(document.importNode(node, true));
+                                                                                                                           });
+                                                                                                                           const newForm = doc.getElementById('chatForm');
+                                                                                                                           if (newForm) {
+                                                                                                                               form.setAttribute('action', newForm.getAttribute('action'));
+                                                                                                                   if (newForm.dataset.urlTemplate) form.dataset.urlTemplate = newForm.dataset.urlTemplate;
+                                                                                                                   if (newForm.dataset.pageUrlTemplate) form.dataset.pageUrlTemplate = newForm.dataset.pageUrlTemplate;
+                                                                                                                           }
+                                                                                                                           const newApp = doc.getElementById('chatApp');
+                                                                                                                   setEmptyState(!!(newApp && newApp.classList.contains('is-empty')));
+                                                                                                                   fixMessageContent(messages);
+                                                                                                                   setupCodeCopyButtons();
+                                                                                                                   if (doc.title) document.title = doc.title;
+                                                                                                                       }
+
+                                                                                                                       viewPath = target.pathname;
+                                                                                                                   if (push) history.pushState({}, '', target.href);
+                                                                                                                   markActiveChat(viewPath);
+                                                                                                                   refreshSendState();
+                                                                                                                   autoScroll = true;
+                                                                                                                   messages.scrollTop = messages.scrollHeight;
+                                                                                                                   closeSidebar();
+                                                                                                                   }
+
+                                                                                                                   // Clicking a chat in the sidebar (also works for chats added later, thanks to delegation)
+                                                                                                                   const chatHistoryEl = document.getElementById('chatHistory');
+                                                                                                                   if (chatHistoryEl) {
+                                                                                                                       chatHistoryEl.addEventListener('click', function (event) {
+                                                                                                                           if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return; // keep "open in new tab"
+                                                                                                                           const item = event.target.closest('.chat-history-item');
+                                                                                                                           if (!item) return;
+                                                                                                                           const link = item.querySelector('a');
+                                                                                                                           if (!link) return;
+                                                                                                                           event.preventDefault();
+                                                                                                                           switchToChat(link.href, true);
+                                                                                                                       });
+                                                                                                                   }
+
+                                                                                                                   if (newChatButton) {
+                                                                                                                       newChatButton.addEventListener('click', function (event) {
+                                                                                                                           if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+                                                                                                                           event.preventDefault();
+                                                                                                                           switchToChat(newChatButton.href, true);
+                                                                                                                       });
+                                                                                                                   }
+
+                                                                                                                   window.addEventListener('popstate', function () {
+                                                                                                                       switchToChat(location.href, false);
+                                                                                                                   });
+
                                                                                                                    form.addEventListener('submit', async (e) => {
                                                                                                                        e.preventDefault();
 
                                                                                                                        const text = input.value.trim();
                                                                                                                        if (!text && attachedFiles.length === 0) return;
+                                                                                                                                         if (activeStreams.has(viewPath)) return; // this chat is still answering
 
                                                                                                                                          // The text that is actually sent to the server (and from there to Ollama): the user's
                                                                                                                                          // message plus the normalized content of the attached files, inside a code block with the file name.
@@ -1273,84 +1425,98 @@ if (chatApp) {
                                                                                                                        input.value = '';
                                                                                                                        attachedFiles = [];
                                                                                                                        renderAttachedFilesRow();
-                                                                                                                       loading.style.display = 'flex';
-                                                                                                                       if (window.startAiLoadingAnimation) window.startAiLoadingAnimation();
-                                                                                                                                         sendButton.disabled = true;
+                                                                                                                       sendButton.disabled = true;
 
                                                                                                                        const aiMessageEl = addMessage('', 'ai');
                                                                                                                        const aiTextEl = aiMessageEl.querySelector('.message-text');
 
-                                                                                                                       try {
-                                                                                                                           const res = await fetch(form.action, {
-                                                                                                                               method: 'POST',
-                                                                                                                               body: formData
-                                                                                                                           });
+                                                                                                                       // This reply keeps running even if the user opens another chat in the meantime
+                                                                                                                       const stream = {
+                                                                                                                           path: viewPath,
+                                                                                                                           chatId: getChatIdByPath(viewPath),
+                                                                                                                                         formAction: form.action
+                                                                                                                       };
+                                                                                                                       activeStreams.set(stream.path, stream);
+                                                                                                                       if (stream.chatId) setChatRowLoading(stream.chatId, true);
 
-                                                                                                                           if (!res.ok || !res.body) {
-                                                                                                                               throw new Error('Stream error');
-                                                                                                                           }
+                                                                                                                                         try {
+                                                                                                                                             const res = await fetch(form.action, {
+                                                                                                                                                 method: 'POST',
+                                                                                                                                                 body: formData
+                                                                                                                                             });
 
-                                                                                                                           // If this was the first message of this chat, the server created a new chat and returned
-                                                                                                                           // its id in the header. We need to update the form action and the page URL with this id
-                                                                                                                           // so that subsequent messages are added to the same chat,
-                                                                                                                           // rather than every message creating a new chat.
-                                                                                                                           const newChatId = res.headers.get('X-Chat-Id');
-                                                                                                                           if (newChatId && form.dataset.urlTemplate) {
-                                                                                                                               const placeholder = '00000000-0000-0000-0000-000000000000';
-                                                                                                                               form.action = form.dataset.urlTemplate.replace(placeholder, newChatId);
+                                                                                                                                             if (!res.ok || !res.body) {
+                                                                                                                                                 throw new Error('Stream error');
+                                                                                                                                             }
 
-                                                                                                                                         if (form.dataset.pageUrlTemplate) {
-                                                                                                                                             const pageUrl = form.dataset.pageUrlTemplate.replace(placeholder, newChatId);
-                                                                                                                                             history.replaceState({}, '', pageUrl);
-                                                                                                                                         }
+                                                                                                                                             // If this was the first message of this chat, the server created a new chat and returned
+                                                                                                                                             // its id in the header. We need to update the form action and the page URL with this id
+                                                                                                                                             // so that subsequent messages are added to the same chat,
+                                                                                                                                             // rather than every message creating a new chat.
+                                                                                                                                             const newChatId = res.headers.get('X-Chat-Id');
+                                                                                                                                             if (newChatId && form.dataset.urlTemplate) {
+                                                                                                                                                 const newFormAction = form.dataset.urlTemplate.replace(NO_CHAT_ID_PLACEHOLDER, newChatId);
+                                                                                                                                                 const newPageUrl = form.dataset.pageUrlTemplate
+                                                                                                                                                 ? form.dataset.pageUrlTemplate.replace(NO_CHAT_ID_PLACEHOLDER, newChatId)
+                                                                                                                                                 : null;
+                                                                                                                                                 stream.formAction = newFormAction;
+                                                                                                                                                 stream.chatId = newChatId;
 
-                                                                                                                                         // If this chat isn't in the sidebar yet (i.e. it was just created),
-                                                                                                                                         // create a new row for it, without needing to refresh the page
+                                                                                                                                                 // Only touch the address bar and the form if the user is still looking at this chat
+                                                                                                                                                 if (stream.path === viewPath) {
+                                                                                                                                                     form.action = newFormAction;
+                                                                                                                                         if (newPageUrl) history.replaceState({}, '', newPageUrl);
+                                                                                                                                                 }
+                                                                                                                                                 if (newPageUrl) rekeyChatStream(stream, new URL(newPageUrl, location.href).pathname);
+
+                                                                                                                                         // The chat is added to the sidebar without refreshing the page
                                                                                                                                          addChatToSidebar(newChatId, text);
-                                                                                                                           }
+                                                                                                                                                 setChatRowLoading(newChatId, true);
+                                                                                                                                             }
 
-                                                                                                                           // Wait for the Markdown libraries to load (usually very fast, also loads from cache)
-                                                                                                                           await markdownLibsReady;
+                                                                                                                                             // Wait for the Markdown libraries to load (usually very fast, also loads from cache)
+                                                                                                                                             await markdownLibsReady;
 
-                                                                                                                           const reader = res.body.getReader();
-                                                                                                                           const decoder = new TextDecoder('utf-8');
-                                                                                                                           let fullText = '';
+                                                                                                                                             const reader = res.body.getReader();
+                                                                                                                                             const decoder = new TextDecoder('utf-8');
+                                                                                                                                             let fullText = '';
 
-                                                                                                                           while (true) {
-                                                                                                                               const { value, done } = await reader.read();
-                                                                                                                               if (done) break;
+                                                                                                                                             while (true) {
+                                                                                                                                                 const { value, done } = await reader.read();
+                                                                                                                                                 if (done) break;
 
                                                                                                                                          const chunk = decoder.decode(value, { stream: true });
-                                                                                                                               fullText += chunk;
-                                                                                                                               // We convert Markdown to HTML during streaming too, so the live display
-                                                                                                                               // is exactly what is seen after the page refreshes (via the server's markdownify)
-                                                                                                                               aiTextEl.innerHTML = renderMarkdown(fullText);
-                                                                                                                               scrollToBottomIfFollowing();
-                                                                                                                           }
+                                                                                                                                                 fullText += chunk;
+                                                                                                                                                 // We convert Markdown to HTML during streaming too, so the live display
+                                                                                                                                                 // is exactly what is seen after the page refreshes (via the server's markdownify)
+                                                                                                                                                 aiTextEl.innerHTML = renderMarkdown(fullText);
+                                                                                                                                                 scrollToBottomIfFollowing();
+                                                                                                                                             }
 
-                                                                                                                           // After the stream ends, clean up file names and enable the code buttons for the new code blocks
-                                                                                                                           fixMessageContent(aiMessageEl);
-                                                                                                                           setupCodeCopyButtons();
-                                                                                                                       } catch (err) {
-                                                                                                                           aiTextEl.textContent = 'Error receiving response';
-                                                                                                                       } finally {
-                                                                                                                           loading.style.display = 'none';
-                                                                                                                           if (window.stopAiLoadingAnimation) window.stopAiLoadingAnimation();
-                                                                                                                                         sendButton.disabled = false;
-                                                                                                                           input.focus();
-                                                                                                                       }
+                                                                                                                                             // After the stream ends, clean up file names and enable the code buttons for the new code blocks
+                                                                                                                                             fixMessageContent(aiMessageEl);
+                                                                                                                                             setupCodeCopyButtons(aiMessageEl);
+                                                                                                                                         } catch (err) {
+                                                                                                                                             aiTextEl.textContent = 'Error receiving response';
+                                                                                                                                         } finally {
+                                                                                                                                             activeStreams.delete(stream.path);
+                                                                                                                                             if (stream.chatId) setChatRowLoading(stream.chatId, false);
+                                                                                                                                         if (stream.path === viewPath) {
+                                                                                                                                             sendButton.disabled = false;
+                                                                                                                                             input.focus();
+                                                                                                                                         }
+                                                                                                                                         }
                                                                                                                    });
             } // End of the if (chatApp) { ... } guard
             (function () {
+                // The "replying" animation is shown in the sidebar, next to the pin button of the chat that is
+                // answering. Several chats can answer at the same time, each with its own spinner.
                 const TOTAL_FRAMES = 6;
                 const FRAME_INTERVAL_MS = 50;
 
                 const loadingBox = document.getElementById("aiLoading");
-                const frameImg = document.getElementById("aiLoadingFrame");
-
-                if (!loadingBox || !frameImg) return;
-
-                const loadingPath = loadingBox.dataset.loadingPath;
+                const loadingPath = loadingBox ? loadingBox.dataset.loadingPath : "";
+                if (!loadingPath) return;
 
                 const framePaths = Array.from(
                     { length: TOTAL_FRAMES },
@@ -1360,27 +1526,39 @@ if (chatApp) {
                 let timerId = null;
                 let currentIndex = 0;
 
-                function startLoadingAnimation() {
-                    if (timerId) return;
-
-                    timerId = setInterval(() => {
-                        currentIndex = (currentIndex + 1) % TOTAL_FRAMES;
-                        frameImg.src = framePaths[currentIndex];
-                    }, FRAME_INTERVAL_MS);
-                }
-
-                function stopLoadingAnimation() {
-                    if (timerId) {
+                function tick() {
+                    const spinners = document.querySelectorAll(".chat-row-loading");
+                    if (spinners.length === 0) {
                         clearInterval(timerId);
                         timerId = null;
+                        currentIndex = 0;
+                        return;
                     }
-
-                    currentIndex = 0;
-                    frameImg.src = framePaths[0];
+                    currentIndex = (currentIndex + 1) % TOTAL_FRAMES;
+                    spinners.forEach(function (img) { img.src = framePaths[currentIndex]; });
                 }
 
-                window.startAiLoadingAnimation = startLoadingAnimation;
-                window.stopAiLoadingAnimation = stopLoadingAnimation;
+                window.setChatRowLoading = function (chatId, on) {
+                    const row = document.querySelector(`#chatHistory .chat-history-row[data-chat-id="${chatId}"]`);
+                    if (!row) return;
+                    let img = row.querySelector(".chat-row-loading");
+
+                    if (on) {
+                        row.classList.add("is-generating");
+                        if (!img) {
+                            img = document.createElement("img");
+                            img.className = "chat-row-loading";
+                            img.alt = "";
+                            img.setAttribute("aria-label", "Responding");
+                            img.src = framePaths[0];
+                            row.appendChild(img);
+                        }
+                        if (!timerId) timerId = setInterval(tick, FRAME_INTERVAL_MS);
+                    } else {
+                        row.classList.remove("is-generating");
+                        if (img) img.remove();
+                    }
+                };
             })();
             (function () {
                 try {

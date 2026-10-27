@@ -1743,3 +1743,25 @@ a {
     unicode-bidi: plaintext;
     overflow-wrap: anywhere;
 }
+
+
+/* ---------- نشانگر «در حال پاسخ‌گویی» کنار دکمه‌ی پین چتِ در حال پاسخ ---------- */
+/* نشانگر قدیمی بالای کادر ورودی دیگه نمایش داده نمی‌شه */
+#aiLoading {
+display: none !important;
+}
+
+.chat-row-loading {
+    position: absolute;
+    right: 74px;            /* درست سمت چپِ دکمه‌ی پین (دکمه‌ها با hover ظاهر می‌شن) */
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    display: block;
+    pointer-events: none;
+}
+
+.chat-history-row.is-generating .chat-history-item {
+    padding-right: 100px;   /* جا برای نشانگر، تا اسم چت زیرش نره */
+}
