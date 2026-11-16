@@ -4,19 +4,32 @@ import asyncio
 import requests
 import trafilatura
 from ddgs import DDGS
+from pathlib import Path
 from django.conf import settings
 from django.db import transaction
 from .models import Messages, Tokenizer
 from tokenizers import Tokenizer as tok
-from modelscope import snapshot_download
 from .exceptions import SearchRequestError
+from huggingface_hub import snapshot_download
 
-_model_path = snapshot_download(
-    "Qwen/Qwen3-8B",
-    allow_patterns=["tokenizer.json", "tokenizer_config.json"]
+
+cache_dir = Path("./models/qwen3-8b")
+
+if (cache_dir / "tokenizer.json").exists():
+    print("Tokenizer already exists!")
+else:
+    model_path = snapshot_download(
+        "Qwen/Qwen3-8B",
+        allow_patterns=[
+            "tokenizer.json",
+            "tokenizer_config.json"
+        ],
+        local_dir=str(cache_dir)
+    )
+
+tokenizer = tok.from_file(
+    str(cache_dir / "tokenizer.json")
 )
-
-tokenizer = tok.from_file(f"{_model_path}/tokenizer.json")
 
 
 #To test and prevent my system from resetting

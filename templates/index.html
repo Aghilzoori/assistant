@@ -23,6 +23,51 @@
   <link rel="stylesheet" href="{% static 'styles/chat.css' %}">
   <title>چت‌بات هوشمند</title>
 
+  <style>
+    /* ============================================================
+       1) اسکرول آزاد سراسری روی html و body
+       ============================================================ */
+    html {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    body {
+      height: auto !important;
+      min-height: 100vh !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    /* ============================================================
+       2) حالت «صفحه غیرچت» — به‌صورت خودکار با JS به body اضافه می‌شه
+       هر صفحه‌ای که chat-messages نداشته باشه، این کلاس رو می‌گیره.
+       ============================================================ */
+
+    /* chat-container در صفحه غیرچت: اسکرول آزاد، بدون قفل ارتفاع */
+    body.page-not-chat .chat-container {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 100vh !important;
+      overflow: visible !important;
+      display: block !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* هدر چت در صفحات غیرچت مخفی بشه */
+    body.page-not-chat .chat-header {
+      display: none !important;
+    }
+
+    /* محتوای اصلی (هر صفحه‌ای که داخل chat-container رندر می‌شه)
+       کل عرض و ارتفاع رو بگیره تا اسکرول طبیعی باشه */
+    body.page-not-chat main > :not(script):not(style) {
+      width: 100%;
+    }
+  </style>
 </head>
 
 <body>
@@ -35,11 +80,9 @@
       </div>
 
       <button type="button" id="themeToggle" class="theme-toggle" aria-label="تغییر حالت روشن/تاریک" title="تغییر حالت روشن/تاریک">
-        <!-- آیکون ماه: فقط در حالت روشن نشون داده می‌شه (برای رفتن به تاریک) -->
         <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
         </svg>
-        <!-- آیکون خورشید: فقط در حالت تاریک نشون داده می‌شه (برای برگشت به روشن) -->
         <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="4"></circle>
           <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
@@ -51,16 +94,66 @@
 
     {% endblock blockname %}
 
-    <script src="{% static 'js/chat.js' %}"></script>
-    <script src="{% static 'js/home.js' %}"></script>
-    <script src="{% static 'js/login.js' %}"></script>
-    <script src="{% static 'js/password_reset_complete.js' %}"></script>
-    <script src="{% static 'js/password_reset_confirm.js' %}"></script>
-    <script src="{% static 'js/password_reset_done.js' %}"></script>
-    <script src="{% static 'js/password_reset_form.js' %}"></script>
-    <script src="{% static 'js/signup.js' %}"></script>
-    <script src="{% static 'js/setting.js' %}"></script>
-    <script src="{% static 'js/plan.js' %}"></script>
+  </main>
+
+  <script src="{% static 'js/chat.js' %}"></script>
+  <script src="{% static 'js/home.js' %}"></script>
+  <script src="{% static 'js/login.js' %}"></script>
+  <script src="{% static 'js/password_reset_complete.js' %}"></script>
+  <script src="{% static 'js/password_reset_confirm.js' %}"></script>
+  <script src="{% static 'js/password_reset_done.js' %}"></script>
+  <script src="{% static 'js/password_reset_form.js' %}"></script>
+  <script src="{% static 'js/signup.js' %}"></script>
+  <script src="{% static 'js/setting.js' %}"></script>
+  <script src="{% static 'js/plan.js' %}"></script>
+
+  <!-- ============================================================
+       تشخیص خودکار: صفحه چت یا صفحه غیرچت؟
+       اگه داخل chat-container عنصر .chat-messages یا .chat-input
+       وجود نداشت → یعنی صفحه لاگین/ثبت‌نام/ریست/تنظیمات/پلن هست
+       → کلاس page-not-chat به body اضافه می‌شه.
+       ============================================================ -->
+  <script>
+    (function () {
+      'use strict';
+
+      function isChatPage() {
+        // نشانه‌های صفحه چت واقعی — اگه هیچ‌کدوم نبود، غیرچته
+        return !!(
+          document.querySelector('.chat-messages') ||
+          document.querySelector('.chat-input') ||
+          document.querySelector('.messages-container') ||
+          document.querySelector('#chatForm') ||
+          document.querySelector('#messageInput')
+        );
+      }
+
+      function applyPageMode() {
+        if (isChatPage()) {
+          document.body.classList.remove('page-not-chat');
+        } else {
+          document.body.classList.add('page-not-chat');
+        }
+      }
+
+      // در DOMContentLoaded و بلافاصله هر دو اجرا شن (برای اطمینان)
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyPageMode);
+      } else {
+        applyPageMode();
+      }
+      applyPageMode();
+
+      // اگه بعداً محتوا با AJAX عوض شد، دوباره چک کن
+      var chatContainer = document.querySelector('.chat-container');
+      if (chatContainer && window.MutationObserver) {
+        var observer = new MutationObserver(function () {
+          applyPageMode();
+        });
+        observer.observe(chatContainer, { childList: true, subtree: false });
+      }
+    })();
+  </script>
 
 </body>
 
