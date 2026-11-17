@@ -11,4 +11,5 @@ def delete_user_when_profile_deleted(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Profile)
 def creat_user_tokenizer(sender, instance, created,**kwargs):
-    Tokenizer.objects.create(user=instance.id)
+    if created:
+        Tokenizer.objects.create(user=instance)
