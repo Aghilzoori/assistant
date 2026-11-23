@@ -7,13 +7,12 @@ from .serializers import ProfileSerializers
 @api_view(['GET'])
 def api_test(request):
     data = [
-        {'GTE': "http://127.0.0.1:8000/"},
-        {'POST', "http://127.0.0.1:8000/ai/"}
+        {'GTE': "api/user"},
     ]
     return Response(data)
 
 @api_view(["GET"])
-def get_users(request):
+def user(request):
     user = request.user.profile
     user_info = Profile.objects.get(id=user.id)
     data = ProfileSerializers(user_info)
