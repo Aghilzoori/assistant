@@ -1,104 +1,101 @@
 # Assistant
 
-An AI-powered web assistant built with Django and Ollama, designed to
-provide an interactive chat experience with local language models, web
-search capabilities, and conversation management.
+An AI-powered web assistant built with Django and Ollama. It provides a
+chat interface for locally hosted language models, optional web search,
+conversation management, and per-user token tracking.
 
 ## Overview
 
-Assistant is a web-based AI chatbot that uses locally hosted language
-models through Ollama. It provides users with an interface to interact
-with AI models, manage conversations, search the web, and keep track of
-their token usage.
-
-The project combines local AI inference with online search capabilities
-in a single application.
+Assistant is a Django-based web application that connects to Ollama for
+local AI inference. Users can hold conversations, choose between
+general-purpose and coding models, optionally include web search results
+in AI responses, and manage their chat history.
 
 ## Features
 
 ### AI Chat
 
--   Interactive AI-powered conversations.
--   Streaming responses for a real-time chat experience.
--   Support for multiple language models.
--   Separate models for general conversations and coding tasks.
--   Persistent conversation history.
--   Conversation titles generated from the first message.
+-   Stream AI responses as they are generated.
+-   Use separate models for general conversations and coding tasks.
+-   Save conversations and messages.
+-   Start new conversations and revisit previous chats.
 
 ### Web Search
 
--   Integrated web search using DuckDuckGo.
--   AI-assisted search query generation.
--   Automatic extraction of webpage content.
--   Search results can be included as context for AI responses.
+-   Search the web with DuckDuckGo.
+-   Use an AI-generated search query based on the user's message.
+-   Extract webpage text with Trafilatura.
+-   Add extracted search results as context for the AI response.
 
 ### Conversation Management
 
--   Create and manage multiple conversations.
--   Pin important conversations.
--   Delete conversations.
--   Store messages and conversation history in the database.
--   Automatic compression of older conversation history to manage
-    context length.
+-   Create and delete conversations.
+-   Pin conversations.
+-   Store chat messages in the database.
+-   Compress older conversation history when it exceeds the configured
+    context-length limit.
 
-### User Management
+### Accounts and Profiles
 
--   User registration and authentication.
--   User profiles.
--   Profile editing.
--   Password reset functionality.
--   Individual token balances.
+-   Register and authenticate users.
+-   Maintain a profile for each user.
+-   Edit profile information.
+-   Use Django's password-reset views.
 
-### Token Management
+### Token Usage and Plans
 
--   Token counting using the Qwen3 tokenizer.
--   Token consumption tracking.
--   Different token refill amounts for Free and Pro plans.
--   Token balance monitoring.
+-   Count text tokens with the Qwen3 tokenizer.
+-   Track token balances for users.
+-   Define Free and Pro plans.
+-   Provide different token refill amounts for Free and active Pro users
+    through a custom management command.
 
-### Additional Features
+### Other
 
--   Light and dark themes.
--   REST API built with Django REST Framework.
+-   Light and dark appearance options in the interface.
+-   REST API endpoints using Django REST Framework.
 -   Bale bot integration.
--   Django administration panel.
+-   Django admin integration.
 
-## Technologies
+## Technology Stack
 
-  Technology                Purpose
-  ------------------------- ----------------------------------------
-  Python                    Main programming language
-  Django                    Backend framework
-  Django REST Framework     REST API
-  Ollama                    Local AI model execution
-  Qwen3 8B                  General-purpose AI model and tokenizer
-  Qwen2.5 Coder 7B          Coding model
-  Hugging Face Tokenizers   Token counting
-  DuckDuckGo Search         Web search
-  Trafilatura               Webpage content extraction
-  Requests                  HTTP communication
-  JavaScript                Frontend interactions
-  HTML & CSS                User interface
-  SQLite                    Database
+  Technology                   Role
+  ---------------------------- --------------------------------------------
+  Python                       Main programming language
+  Django                       Web framework
+  Django REST Framework        REST API
+  Ollama                       Local model inference
+  Qwen3 8B                     General-purpose model and tokenizer source
+  Qwen2.5 Coder 7B             Coding model
+  Hugging Face Tokenizers      Token counting
+  DuckDuckGo Search (`ddgs`)   Web search
+  Trafilatura                  Webpage content extraction
+  Requests                     HTTP requests
+  SQLite                       Default database
+  HTML, CSS, JavaScript        Frontend
 
-## AI Models
+## Configured AI Models
 
-The project is currently configured to use:
+The model names are configured in `assistant/settings.py`.
 
-  Model                Purpose
+  Model                Use
   -------------------- ---------------------------------------------------
   `qwen3:8b`           General conversations and search-query generation
-  `qwen2.5-coder:7b`   Programming and code-related conversations
+  `qwen2.5-coder:7b`   Coding-related conversations
 
-Model names and related settings are configured in
-`assistant/settings.py`.
+You need to download the models separately through Ollama before using
+them.
 
 ## Project Structure
+
+The following tree reflects the files and directories currently present
+in the repository:
 
 ``` text
 assistant/
 ├── api/
 │   ├── migrations/
+│   │   └── __init__.py
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
@@ -118,8 +115,25 @@ assistant/
 ├── chatbot/
 │   ├── management/
 │   │   └── commands/
+│   │       ├── __init__.py
+│   │       ├── bale_api.py
+│   │       ├── bale_bot.py
+│   │       └── token.py
 │   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_alter_messages_text.py
+│   │   ├── 0003_chat_messages_chat.py
+│   │   ├── 0004_chat_pin.py
+│   │   ├── 0005_alter_chat_options_alter_messages_options.py
+│   │   ├── 0006_chat_user.py
+│   │   ├── 0007_tokenizer.py
+│   │   └── 0008_alter_tokenizer_tokenizer.py
 │   ├── templates/
+│   │   └── chatbot/
+│   │       ├── chat.html
+│   │       ├── plan.html
+│   │       └── setting.html
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
@@ -133,7 +147,19 @@ assistant/
 │
 ├── home/
 │   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_profile_created_alter_profile_id.py
+│   │   └── 0003_profile_plan_profile_pro_expires_at.py
 │   ├── templates/
+│   │   └── home/
+│   │       ├── home.html
+│   │       ├── login.html
+│   │       ├── password_reset_complete.html
+│   │       ├── password_reset_confirm.html
+│   │       ├── password_reset_done.html
+│   │       ├── password_reset_form.html
+│   │       └── signup.html
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
@@ -146,22 +172,73 @@ assistant/
 │
 ├── models/
 │   └── qwen3-8b/
+│       ├── tokenizer.json
+│       └── tokenizer_config.json
 │
 ├── static/
+│   ├── images/
+│   │   ├── loading/
+│   │   │   ├── loading1.svg
+│   │   │   ├── loading2.svg
+│   │   │   ├── loading3.svg
+│   │   │   ├── loading4.svg
+│   │   │   ├── loading5.svg
+│   │   │   └── loading6.svg
+│   │   ├── icon.svg
+│   │   └── logo.svg
+│   ├── js/
+│   │   ├── chat.js
+│   │   ├── home.js
+│   │   ├── login.js
+│   │   ├── password_reset_complete.js
+│   │   ├── password_reset_confirm.js
+│   │   ├── password_reset_done.js
+│   │   ├── password_reset_form.js
+│   │   ├── plan.js
+│   │   ├── setting.js
+│   │   └── signup.js
+│   └── styles/
+│       ├── chat.css
+│       ├── home.css
+│       ├── login.css
+│       ├── main.css
+│       ├── password_reset_complete.css
+│       ├── password_reset_confirm.css
+│       ├── password_reset_done.css
+│       ├── password_reset_form.css
+│       ├── plan.css
+│       ├── setting.css
+│       └── signup.css
+│
 ├── templates/
-├── .env
+│   └── index.html
+│
+├── .directory
 ├── .gitignore
-├── manage.py
-├── requirements.txt
 ├── LICENSE.md
-└── README.md
+├── README.md
+├── manage.py
+└── requirements.txt
 ```
+
+### Main directories
+
+-   `api/` --- API views, serializers, URL routes, and migrations.
+-   `assistant/` --- Django project configuration and root URL routing.
+-   `chatbot/` --- Chat functionality, chat models, AI integration
+    utilities, templates, and custom management commands.
+-   `home/` --- Home page, authentication-related views, user profiles,
+    forms, signals, and templates.
+-   `models/qwen3-8b/` --- Tokenizer files used for counting tokens.
+-   `static/` --- Frontend CSS, JavaScript, icons, logos, and loading
+    assets.
+-   `templates/` --- Shared/base Django template files.
 
 ## Installation
 
 ### Prerequisites
 
-Make sure the following are installed:
+Install the following before setting up the project:
 
 -   Python
 -   Git
@@ -174,13 +251,11 @@ git clone https://github.com/Aghilzoori/assistant.git
 cd assistant
 ```
 
-### 2. Create a virtual environment
+### 2. Create and activate a virtual environment
 
 ``` bash
 python -m venv venv
 ```
-
-Activate it:
 
 **Linux / macOS**
 
@@ -194,16 +269,15 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### 3. Install Python dependencies
 
 ``` bash
 pip install -r requirements.txt
 ```
 
-### 4. Download the AI models
+### 4. Download the Ollama models
 
-Make sure Ollama is installed and running, then download the configured
-models:
+Make sure Ollama is installed and running:
 
 ``` bash
 ollama pull qwen3:8b
@@ -212,10 +286,11 @@ ollama pull qwen2.5-coder:7b
 
 ### 5. Configure environment variables
 
-Create a `.env` file in the project root.
+Create a `.env` file in the project root. The application reads
+environment variables using `python-dotenv`.
 
 ``` env
-SECRET_KEY=your-secret-key
+SECRET_KEY=replace-with-a-secure-secret-key
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
 
@@ -225,11 +300,13 @@ EMAIL_HOST_PASSWORD=your-email-app-password
 BOT_TOKEN=your-bale-bot-token
 ```
 
-The email and Bale bot variables are only needed if you use those
+Email and Bale bot credentials are needed only if you use those
 integrations.
 
-**Important:** Do not commit your real `.env` file or secret credentials
-to Git.
+**Security:** Keep your real `.env` file and credentials private. Do not
+commit secrets to the repository. For production, use a secure
+`SECRET_KEY`, set `DEBUG=False`, and configure `ALLOWED_HOSTS` for your
+deployment.
 
 ### 6. Apply database migrations
 
@@ -257,19 +334,18 @@ http://127.0.0.1:8000/
 
 ## API
 
-The project includes a REST API powered by Django REST Framework.
+The project exposes API routes through Django REST Framework.
 
   Endpoint            Method   Description
-  ------------------- -------- -------------------------------------------
+  ------------------- -------- ------------------------------------------
   `/api/`             GET      API test endpoint
-  `/api/get-users/`   GET      Retrieve the authenticated user's profile
+  `/api/get-users/`   GET      Returns the authenticated user's profile
 
-The API endpoints may require authentication, depending on the
-configured permissions and authentication settings.
+Authentication and permissions depend on the API configuration.
 
-## Management Commands
+## Custom Management Commands
 
-The project includes custom Django management commands.
+The `chatbot` app contains custom Django management commands.
 
 ### Run the Bale bot
 
@@ -277,26 +353,27 @@ The project includes custom Django management commands.
 python manage.py bale_bot
 ```
 
-### Update user token balances
+### Update token balances
 
 ``` bash
 python manage.py token
 ```
 
-The token command adds: - 321 tokens to Free-plan users. - 876 tokens to
-active Pro-plan users.
+The token command adds: - 321 tokens to users on the Free plan. - 876
+tokens to users on an active Pro plan.
 
-The command does not schedule itself. Run it manually or configure an
-external scheduler if periodic refills are required.
+The command performs one update each time it is run. To refill tokens
+periodically, schedule the command with an external scheduler.
 
 ## Configuration Notes
 
--   AI model names are configured in `assistant/settings.py`.
--   Ollama must be available to the Django application.
--   The Qwen3 tokenizer files are stored under `models/qwen3-8b/`.
--   Web search requires an internet connection.
--   Email functionality requires valid SMTP credentials.
--   Bale bot functionality requires a valid bot token.
+-   Model names and AI prompts are configured in
+    `assistant/settings.py`.
+-   Ollama must be running and accessible to the Django application.
+-   The tokenizer files are located in `models/qwen3-8b/`.
+-   Web search and webpage extraction require an internet connection.
+-   Email features require valid SMTP credentials.
+-   Bale bot integration requires a valid bot token.
 
 ## License
 
